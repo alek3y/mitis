@@ -11,20 +11,56 @@ class Packet:
 
 	def __init__(self, packet_type, content=None):
 		if packet_type.value[1] != type(content):
-			raise ValueError(f"expected data type {packet_type.value[1]}")
+			raise TypeError(f"expected data type {packet_type.value[1]}")
 
-		if packet_type == self.Type.CHAT:
-			self.data = content.encode("utf-8")
-		else:
-			self.data = content
-
+		self.content = content
 		self.type = packet_type
 
 	def pack(self):
 		packet_bytes = self.type.value[0].to_bytes(1, "little")
-		if self.data:
-			packet_bytes += self.data
+
+		data = None
+		if self.type == self.Type.CHAT:
+			data = self.content.encode("utf-8")
+		elif self.type != self.Type.HELLO:
+			data = self.content
+
+		if data:
+			packet_bytes += data
+
 		return len(packet_bytes).to_bytes(4, "little") + packet_bytes
+
+	@staticmethod
+	def unpack(packed_packet):
+		if len(packed_packet) < 4:
+			raise ValueError(f"missing packet length")
+
+		length = int.from_bytes(packed_packet[:4], "little")
+		if length < 1:
+			raise ValueError(f"invalid packet length")
+
+		packet_bytes = packed_packet[4:4 + length]
+		if len(packet_bytes) < length:
+			raise EOFError(f"truncated packet bytes")
+
+		type_id = packet_bytes[0]
+		packet_type = None
+		for t in Packet.Type:
+			if t.value[0] == type_id:
+				packet_type = t
+				break
+
+		if not packet_type:
+			raise ValueError(f"content type not recognized")
+
+		data = packet_bytes[1:]
+		content = None
+		if packet_type == Packet.Type.CHAT:
+			content = data.decode("utf-8")
+		elif packet_type != Packet.Type.HELLO:
+			content = data
+
+		return Packet(packet_type, content)
 
 class Connection:
 	def __init__(self, ip):
