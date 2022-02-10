@@ -6,8 +6,9 @@ class Packet:
 		HELLO = (0, type(None))
 		RAW = (1, bytes)
 		CHAT = (2, str)
-		AUDIO = (3, bytes)
-		VIDEO = (4, bytes)	# TODO: Numpy array?
+		CAPTIONS = (3, str)
+		AUDIO = (4, bytes)
+		VIDEO = (5, bytes)	# TODO: Numpy array?
 
 	def __init__(self, packet_type, content=None):
 		if packet_type.value[1] != type(content):
@@ -20,7 +21,7 @@ class Packet:
 		packet_bytes = self.type.value[0].to_bytes(1, "little")
 
 		data = None
-		if self.type == self.Type.CHAT:
+		if self.type in (self.Type.CHAT, self.Type.CAPTIONS):
 			data = self.content.encode("utf-8")
 		elif self.type != self.Type.HELLO:
 			data = self.content
@@ -55,7 +56,7 @@ class Packet:
 
 		data = packet_bytes[1:]
 		content = None
-		if packet_type == Packet.Type.CHAT:
+		if packet_type in (Packet.Type.CHAT, Packet.Type.CAPTIONS):
 			content = data.decode("utf-8")
 		elif packet_type != Packet.Type.HELLO:
 			content = data
