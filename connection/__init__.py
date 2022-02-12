@@ -29,20 +29,12 @@ class Packet:
 		if data:
 			packet_bytes += data
 
-		return len(packet_bytes).to_bytes(4, "little") + packet_bytes
+		return packet_bytes
 
 	@staticmethod
-	def unpack(packed_packet):
-		if len(packed_packet) < 4:
-			raise ValueError(f"missing packet length")
-
-		length = int.from_bytes(packed_packet[:4], "little")
-		if length < 1:
-			raise ValueError(f"invalid packet length")
-
-		packet_bytes = packed_packet[4:4 + length]
-		if len(packet_bytes) < length:
-			raise EOFError(f"truncated packet bytes")
+	def unpack(packet_bytes):
+		if len(packet_bytes) < 1:
+			raise ValueError(f"missing packet type")
 
 		type_id = packet_bytes[0]
 		packet_type = None
@@ -64,12 +56,31 @@ class Packet:
 		return Packet(packet_type, content)
 
 class Connection:
-	def __init__(self, ip):
+	def __init__(self, binding=None):
 		self.socket = socket.socket(type=socket.SOCK_DGRAM)
-		self.ip = ip
-		# TODO: What about listening mode?
 
-	def send(data):
-		length = len(data).to_bytes(4, "little")
-		packet = length + data
-		self.socket.sendto(packet, self.ip)
+		if binding:
+			self.socket.bind(binding)
+
+	def send(self, packet, ip):
+		packed_packet = packet.pack()
+		length = len(packed_packet)
+
+		return self.socket.sendto(
+			length.to_bytes(4, "little") + packed_packet,
+			ip
+		)
+
+	def receive(self):
+		length_bytes, _ = self.socket.recvfrom(4)
+
+		if len(length_bytes) < 4:
+			raise EOFError(f"truncated packet bytes")
+
+		length = int.from_bytes(length_bytes, "little")
+		if length < 1:
+			raise ValueError(f"invalid packet length")
+
+		# TODO: https://stackoverflow.com/a/675821
+		packed_packet = self.socket.recvfrom(length)
+		return Packet.unpack(packed_packet)
