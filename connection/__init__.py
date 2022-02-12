@@ -1,4 +1,5 @@
 from enum import Enum
+from threading import Thread
 import socket
 
 class Packet:
@@ -81,3 +82,15 @@ class Connection:
 			raise ValueError("invalid packet length")
 
 		return (Packet.unpack(packed_packet), source)
+
+class Receiver(Thread):
+	def __init__(self, connection):
+		Thread.__init__(self)
+		self.connection = connection
+
+	def run(self):
+		while True:
+			try:
+				packet, source = self.connection.receive()
+			except (ValueError, TypeError):
+				continue
