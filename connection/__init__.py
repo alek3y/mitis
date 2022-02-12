@@ -34,7 +34,7 @@ class Packet:
 	@staticmethod
 	def unpack(packet_bytes):
 		if len(packet_bytes) < 1:
-			raise ValueError(f"missing packet type")
+			raise ValueError("missing packet type")
 
 		type_id = packet_bytes[0]
 		packet_type = None
@@ -44,7 +44,7 @@ class Packet:
 				break
 
 		if not packet_type:
-			raise ValueError(f"content type not recognized")
+			raise ValueError("content type not recognized")
 
 		data = packet_bytes[1:]
 		content = None
@@ -72,15 +72,12 @@ class Connection:
 		)
 
 	def receive(self):
-		length_bytes, _ = self.socket.recvfrom(4)
-
-		if len(length_bytes) < 4:
-			raise EOFError(f"truncated packet bytes")
+		length_bytes, source = self.socket.recvfrom(4, socket.MSG_PEEK)
 
 		length = int.from_bytes(length_bytes, "little")
-		if length < 1:
-			raise ValueError(f"invalid packet length")
+		packed_packet = self.socket.recvfrom(4 + length)[0][4:]
 
-		# TODO: https://stackoverflow.com/a/675821
-		packed_packet = self.socket.recvfrom(length)
-		return Packet.unpack(packed_packet)
+		if len(packed_packet) < length:
+			raise ValueError("invalid packet length")
+
+		return (Packet.unpack(packed_packet), source)
