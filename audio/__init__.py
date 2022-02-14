@@ -1,15 +1,20 @@
 import pyaudio
 import speech_recognition as sr
 
-TIME = 900 #milliseconds
+TIME = 5000 #millisecondi
+FORMAT = pyaudio.paInt16
+CHANNELS = 1 #numero di canali audio da usare
+RATE = 44100 #numero di frame al secondo
+CHUNK = 1024 #numero di frame per ogni buffer
 
 class SpeechRecognition:
     def __init__(self):
         self.r = sr.Recognizer()
         self.source = sr.Microphone()
         self.p = pyaudio.PyAudio()
+  
 
-    #records voice and prints it out
+    #cattura la voce
     def caption(self):
         with self.source as source:
             print("listening...")
@@ -19,13 +24,8 @@ class SpeechRecognition:
             
             print("client said: " + text)
     
-    #records audio and puts audio bytes in a list 
+    #registra l'audio e mette i bytes in una lista dove ogni elemento è un chunk
     def recorder(self):
-        global TIME
-        FORMAT = pyaudio.paInt16
-        CHANNELS = 1 #number of audio streams to use
-        RATE = 44100 #number of frames per second
-        CHUNK = 1024 #number of frames per buffer
         audio_bytes = []
 
         stream = self.p.open(format=FORMAT,
@@ -38,9 +38,17 @@ class SpeechRecognition:
         for i in range(0, int(44100 / CHUNK * (TIME / 1000))):
             audio_bytes.append(stream.read(CHUNK))
 
-        return audio_bytes
+        #unisce i chunk
+        joined_audio = b''.join(audio_bytes)
+        return joined_audio
+    
+    def player(self, audio):
+        stream = self.p.open(format=FORMAT,
+                        channels=CHANNELS,
+                        rate=RATE,
+                        output=True,
+                        frames_per_buffer=CHUNK
+                        )
 
-
-        
-
-
+        #riproduce l'audio
+        stream.write(audio)
