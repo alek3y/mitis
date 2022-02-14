@@ -2,7 +2,9 @@ from enum import Enum
 from threading import Thread
 import socket
 import re
+import string
 
+CLIENTID_CHARS = string.ascii_letters + string.digits
 CLIENTID_LENGTH = 5
 
 class Packet:
@@ -95,7 +97,7 @@ class Connection:
 		if client_id_bytes != bytes(CLIENTID_LENGTH):
 			client_id = client_id_bytes.decode("utf-8")
 
-			if not re.match(f"[0-9A-Za-z]{{{CLIENTID_LENGTH}}}", client_id):
+			if not re.match(f"[{CLIENTID_CHARS}]{{{CLIENTID_LENGTH}}}", client_id):
 				raise ValueError("invalid client identifier")
 
 		packed_packet = data[CLIENTID_LENGTH:]
@@ -111,8 +113,8 @@ class Receiver(Thread):
 	def run(self):
 		while True:
 			try:
-				source, packet = self.connection.receive()
+				client, packet = self.connection.receive()
 			except (ValueError, TypeError, UnicodeDecodeError):
 				continue
 
-			self.handler(source, packet)
+			self.handler(client, packet)
