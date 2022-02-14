@@ -1,15 +1,19 @@
 from enum import Enum
 from threading import Thread
 import socket
+import re
+
+CLIENTID_LENGTH = 5
 
 class Packet:
 	class Type(Enum):
-		HELLO = (0, type(None))
-		RAW = (1, bytes)
-		CHAT = (2, str)
-		CAPTIONS = (3, str)
-		AUDIO = (4, bytes)
-		VIDEO = (5, bytes)	# TODO: Numpy array?
+		RAW = (0, bytes)
+		HELLO = (1, type(None))
+		JOIN = (2, str)
+		CHAT = (3, str)
+		CAPTIONS = (4, str)
+		AUDIO = (5, bytes)
+		VIDEO = (6, bytes)
 
 	def __init__(self, packet_type, content=None):
 		if packet_type.value[1] != type(content):
@@ -22,7 +26,7 @@ class Packet:
 		packet_bytes = self.type.value[0].to_bytes(1, "little")
 
 		data = None
-		if self.type in (self.Type.CHAT, self.Type.CAPTIONS):
+		if self.type.value[1] == str:
 			data = self.content.encode("utf-8")
 		elif self.type != self.Type.HELLO:
 			data = self.content
@@ -49,7 +53,7 @@ class Packet:
 
 		data = packet_bytes[1:]
 		content = None
-		if packet_type in (Packet.Type.CHAT, Packet.Type.CAPTIONS):
+		if packet_type.value[1] == str:
 			content = data.decode("utf-8")
 		elif packet_type != Packet.Type.HELLO:
 			content = data
@@ -63,8 +67,13 @@ class Connection:
 		if binding:
 			self.socket.bind(binding)
 
-	def send(self, packet, ip):
-		packed_packet = packet.pack()
+	def send(self, packet, ip, client_id=None):
+		if not client_id:
+			packed_packet = bytes(CLIENTID_LENGTH)
+		else:
+			packed_packet = client_id[:CLIENTID_LENGTH].encode("utf-8")
+
+		packed_packet += packet.pack()
 		length = len(packed_packet)
 
 		return self.socket.sendto(
@@ -73,24 +82,37 @@ class Connection:
 		)
 
 	def receive(self):
-		length_bytes, source = self.socket.recvfrom(4, socket.MSG_PEEK)
+		length_bytes, address = self.socket.recvfrom(4, socket.MSG_PEEK)
 
 		length = int.from_bytes(length_bytes, "little")
-		packed_packet = self.socket.recvfrom(4 + length)[0][4:]
+		data = self.socket.recvfrom(4 + length)[0][4:]
 
-		if len(packed_packet) < length:
+		if len(data) < length:
 			raise ValueError("invalid packet length")
 
-		return (Packet.unpack(packed_packet), source)
+		client_id = None
+		client_id_bytes = data[:CLIENTID_LENGTH]
+		if client_id_bytes != bytes(CLIENTID_LENGTH):
+			client_id = client_id_bytes.decode("utf-8")
+
+			if not re.match(f"[0-9A-Za-z]{{{CLIENTID_LENGTH}}}", client_id):
+				raise ValueError("invalid client identifier")
+
+		packed_packet = data[CLIENTID_LENGTH:]
+
+		return ((client_id, address), Packet.unpack(packed_packet))
 
 class Receiver(Thread):
-	def __init__(self, connection):
+	def __init__(self, connection, handler):
 		Thread.__init__(self)
 		self.connection = connection
+		self.handler = handler
 
 	def run(self):
 		while True:
 			try:
-				packet, source = self.connection.receive()
-			except (ValueError, TypeError):
+				source, packet = self.connection.receive()
+			except (ValueError, TypeError, UnicodeDecodeError):
 				continue
+
+			self.handler(source, packet)
