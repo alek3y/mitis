@@ -10,8 +10,12 @@ CLIENTID_LENGTH = 5
 class Packet:
 	class Type(Enum):
 		RAW = (0, bytes)
+
+		# Nuove connessioni
 		HELLO = (1, type(None))
 		JOIN = (2, str)
+
+		# Stream dei client
 		CHAT = (3, str)
 		CAPTIONS = (4, str)
 		AUDIO = (5, bytes)
