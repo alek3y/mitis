@@ -1,5 +1,5 @@
 from enum import Enum
-from threading import Thread
+from threading import Thread, Semaphore
 import socket
 import re
 import string
@@ -109,10 +109,15 @@ class Connection:
 		return ((client_id, address), Packet.unpack(packed_packet))
 
 class Receiver(Thread):
-	def __init__(self, connection, handler):
+	def __init__(self, connection, handler=None):
 		Thread.__init__(self)
 		self.connection = connection
+
 		self.handler = handler
+		self.received = {
+			t: (Semaphore(0), [])
+			for t in Packet.Type
+		}
 
 	def run(self):
 		while True:
@@ -121,4 +126,14 @@ class Receiver(Thread):
 			except (ValueError, TypeError, UnicodeDecodeError):
 				continue
 
-			self.handler(client, packet)
+			if not self.handler:
+				lock, packets = self.received[packet.type]
+				lock.release()
+				packets.append((client, packet.content))
+			else:
+				self.handler(client, packet)
+
+	def next(self, packet_type):
+		lock, packets = self.received[packet_type]
+		lock.acquire()
+		return packets.pop(0)
