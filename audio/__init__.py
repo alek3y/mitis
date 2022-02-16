@@ -1,7 +1,7 @@
 import pyaudio
 import speech_recognition as sr
 
-TIME = 5000 #millisecondi
+TIME = 3000 #millisecondi
 FORMAT = pyaudio.paInt16
 CHANNELS = 1 #numero di canali audio da usare
 RATE = 44100 #numero di frame al secondo
@@ -15,14 +15,10 @@ class SpeechRecognition:
   
 
     #cattura la voce
-    def caption(self):
-        with self.source as source:
-            print("listening...")
-
-            audio = self.r.listen(source)
-            text = self.r.recognize_google(audio, language='it-IT')
-            
-            print("client said: " + text)
+    def caption(self, audio):
+        audio_data = sr.AudioData(audio, RATE, 2) #Byte -> AudioData
+        text = self.r.recognize_google(audio_data=audio_data, language='it-IT')
+        print("client said: " + text)
     
     #registra l'audio e mette i bytes in una lista dove ogni elemento è un chunk
     def recorder(self):
