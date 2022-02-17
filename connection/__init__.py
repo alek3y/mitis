@@ -109,6 +109,9 @@ class Connection:
 		return ((client_id, address), Packet.unpack(packed_packet))
 
 class Receiver(Thread):
+	class TimeoutError(Exception):
+		pass
+
 	def __init__(self, connection, handler=None):
 		Thread.__init__(self)
 		self.connection = connection
@@ -133,7 +136,11 @@ class Receiver(Thread):
 			else:
 				self.handler(client, packet)
 
-	def next(self, packet_type):
+	def next(self, packet_type, timeout=None):
 		lock, packets = self.received[packet_type]
-		lock.acquire()
-		return packets.pop(0)
+
+		lock.acquire(timeout=timeout)
+		try:
+			return packets.pop(0)
+		except IndexError:
+			raise self.TimeoutError("next packet timed out")

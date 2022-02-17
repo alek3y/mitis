@@ -31,8 +31,8 @@ def client_new_id(clients):
 
 	return client_id
 
-def client_join(source_address, room):
-	global clients, rooms
+def packet_join(source_address, room):
+	global clients, rooms, server
 
 	if source_address in clients.values():
 		return
@@ -54,8 +54,11 @@ def client_join(source_address, room):
 	clients[client_id] = source_address
 	rooms[room].add(client_id)
 
-def client_chat(source_address, message):
-	global clients, rooms
+	# Segnala al client il suo ID e che può procedere
+	server.send(Packet(Packet.Type.HELLO), source_address, client_id)
+
+def packet_chat(source_address, message):
+	global clients, rooms, server
 
 	source_client_id = None
 	for client_id in clients:
@@ -83,9 +86,9 @@ def client_chat(source_address, message):
 
 def packet_handler(source_client, packet):
 	if packet.type == Packet.Type.JOIN:
-		client_join(source_client[1], packet.content)
+		packet_join(source_client[1], packet.content)
 	elif packet.type == Packet.Type.CHAT:
-		client_chat(source_client[1], packet.content)
+		packet_chat(source_client[1], packet.content)
 	else:
 		logging.error(f"Received unsupported packet {packet.type}")
 
