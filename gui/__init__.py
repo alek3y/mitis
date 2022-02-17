@@ -15,7 +15,8 @@ cam_status = False
 subtitles_status = False
 
 class Gui:
-	def __init__(self):
+	def __init__(self, roomJoiner):
+		self.roomJoiner = roomJoiner
 		self.root = ThemedTk(theme = "breeze")	#finestra padre con tema breeze
 		self.root.title("Mitis")
 		width_screen = self.root.winfo_screenwidth()	# larghezza dello schermo
@@ -99,7 +100,7 @@ class Gui:
 
 	def getJoinCode(self, event, input_entry, room_code, dialog):
 		if (room_code.get() != ""):
-			print(room_code.get())
+			self.roomJoiner(room_code.get())
 			input_entry.delete(0, "end")
 			self.createWindow(dialog)
 
