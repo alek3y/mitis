@@ -1,4 +1,5 @@
 from connection import *
+from gui import Gui
 from threading import Thread
 import sys
 import logging
@@ -24,7 +25,5 @@ if __name__ == "__main__":
 
 	Thread(target=chat, args=(receiver,)).start()
 
-	send(Packet.Type.JOIN, "th3g3ntl3man")
-	while True:
-		message = input()
-		send(Packet.Type.CHAT, message)
+	gui = Gui(lambda room: send(Packet.Type.JOIN, room))
+	gui.root.mainloop()
