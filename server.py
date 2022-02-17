@@ -38,6 +38,10 @@ def packet_join(source_address, room):
 		return
 
 	client_id = client_new_id(clients)
+
+	# Segnala al client l'avvenuta elaborazione della richiesta
+	server.send(Packet(Packet.Type.HELLO), source_address, None)
+
 	if room not in rooms:
 		logging.debug(f"Creating room '{room}' for client {client_id, source_address}")
 		rooms[room] = set()
@@ -53,9 +57,6 @@ def packet_join(source_address, room):
 
 	clients[client_id] = source_address
 	rooms[room].add(client_id)
-
-	# Segnala al client il suo ID e che può procedere
-	server.send(Packet(Packet.Type.HELLO), source_address, client_id)
 
 def packet_chat(source_address, message):
 	global clients, rooms, server

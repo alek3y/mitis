@@ -1,18 +1,17 @@
 from connection import *
 from gui import Gui
-from threading import Thread
-import time
+from threading import Thread, Semaphore
 import sys
 import logging
 
 SERVER_ADDRESS = ("localhost", 4444)
+SERVER_REPLY_TIMEOUT = 5
 
 logging.basicConfig(format="%(levelname)s: %(message)s", level=logging.DEBUG)
 client = Connection()
 
-# TODO: C'è un altro modo? :I
-join_request = None
-has_joined = False
+join_request_wait = Semaphore(0)
+join_timeout = SERVER_REPLY_TIMEOUT
 
 def send(packet_type, content):
 	global client
@@ -25,30 +24,30 @@ def packets_chat(receiver):
 		#print(f"<{client_id}> {content}")
 
 def packets_hello(receiver):
-	global has_joined, join_request
+	global join_request_wait, join_timeout
+
+	join_request_wait.acquire()
 	while True:
 		try:
-			(client_id, _), content = receiver.next(Packet.Type.HELLO, timeout=1)
-
-			if not has_joined:
-				logging.debug(f"Connected with client ID '{client_id}'")
-				has_joined = True
-				# TODO: Salvare l'ID e cambiare schermata sulla GUI
-			else:
-				# TODO: Aggiungere la webcam di un nuovo client
-				pass
+			(client_id, _), content = receiver.next(Packet.Type.HELLO, timeout=join_timeout)
 		except Receiver.TimeoutError:
-			if join_request != None and time.time() - join_request >= 2 and not has_joined:
-				# TODO: Riportare l'errore di connessione sulla GUI
-				logging.error("Cannot connect to server")
-				join_request = None
-				pass
+			# TODO: Riportare l'errore di connessione sulla GUI
+			logging.error("Cannot connect to remote server")
+			raise NotImplementedError
 
-def request_join(room):
-	global join_request
+		if not client_id:
+			# TODO: Cambiare schermata sulla GUI
+			logging.debug("Successfully connected to remote server")
+			join_timeout = None
+		else:
+			# TODO: Aggiungere una webcam per il nuovo client
+			logging.debug(f"New client connected with ID '{client_id}'")
+
+def join_request(room):
+	global join_request_wait
 
 	send(Packet.Type.JOIN, room)
-	join_request = time.time()
+	join_request_wait.release()
 
 if __name__ == "__main__":
 	receiver = Receiver(client)
@@ -57,5 +56,5 @@ if __name__ == "__main__":
 	Thread(target=packets_chat, args=(receiver,)).start()
 	Thread(target=packets_hello, args=(receiver,)).start()
 
-	gui = Gui(request_join)
+	gui = Gui(join_request)
 	gui.root.mainloop()

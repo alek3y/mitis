@@ -143,4 +143,4 @@ class Receiver(Thread):
 		try:
 			return packets.pop(0)
 		except IndexError:
-			raise self.TimeoutError("next packet timed out")
+			raise self.TimeoutError("packet request timed out")
