@@ -25,16 +25,18 @@ class Gui:
 		self.root.geometry(screen_size)
 		self.root.minsize(800, 500)	#grandezza minima finestra
 
-		dialog = ttk.Frame(self.root)
-		dialog_text = ttk.Label(dialog, text = "inserisci codice stanza:", font = FONT)
+		self.dialog = ttk.Frame(self.root)
+		dialog_text = ttk.Label(self.dialog, text = "inserisci codice stanza:", font = FONT)
 		dialog_text.pack()
 		room_code = tk.StringVar()
-		input_entry= ttk.Entry(dialog, textvariable = room_code, font = FONT)
+		input_entry= ttk.Entry(self.dialog, textvariable = room_code, font = FONT)
 		input_entry.pack()
-		submit = ttk.Button(dialog, text = "JOIN")
-		submit.pack(pady = 5)
-		submit.bind("<ButtonRelease>", lambda event:self.getJoinCode(event, input_entry, room_code, dialog))
-		dialog.pack(expand = True)
+		self.submit = ttk.Button(self.dialog, text = "JOIN")
+		self.submit.pack(pady = 5)
+		self.submit.bind("<ButtonRelease>", lambda event:self.getJoinCode(event, room_code))
+		self.error = ttk.Label(self.dialog, text = "", foreground = "red", font = FONT)
+		self.error.pack()
+		self.dialog.pack(expand = True)
 
 	def micToggle(self, event, mute_button, mic_off, mic_on, input_source = "none"):
 		global mic_status
@@ -98,14 +100,19 @@ class Gui:
 		if (text.get() == ""):
 			textbox.insert(0, PLACEHOLDER)
 
-	def getJoinCode(self, event, input_entry, room_code, dialog):
-		if (room_code.get() != ""):
+	def getJoinCode(self, event, room_code):
+		self.error.config(text = "")
+		self.error.update()
+		if (room_code.get() != "" and str(self.submit["state"]) != "disabled"):
+			self.submit["state"] = "disabled"
 			self.roomJoiner(room_code.get())
-			input_entry.delete(0, "end")
-			self.createWindow(dialog)
 
-	def createWindow(self, dialog):
-		dialog.pack_forget()
+	def failJoin(self):
+		self.error.config(text = "ERRORE: il server non risponde")
+		self.submit["state"] = "enabled"
+
+	def createWindow(self):
+		self.dialog.pack_forget()
 
 		#creazione delle colonne e delle righe
 		self.root.columnconfigure(0, weight = 1)
