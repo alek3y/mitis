@@ -65,9 +65,3 @@ class Audio(Thread):
         return b''.join(buffer)
 
 
-a = Audio(pyaudio.PyAudio(), lambda x: print(len(x)))
-b = SpeechRecognition(a)
-a.start()
-b.start()
-a.join()
-
