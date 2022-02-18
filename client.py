@@ -23,25 +23,26 @@ def packets_chat(receiver):
 
 		#print(f"<{client_id}> {content}")
 
-def packets_hello(receiver):
+def packets_hello(gui, receiver):
 	global join_request_wait, join_timeout
 
-	join_request_wait.acquire()
 	while True:
-		try:
-			(client_id, _), content = receiver.next(Packet.Type.HELLO, timeout=join_timeout)
-		except Receiver.TimeoutError:
-			# TODO: Riportare l'errore di connessione sulla GUI
-			logging.error("Cannot connect to remote server")
-			raise NotImplementedError
+		join_request_wait.acquire()
+		while True:
+			try:
+				(client_id, _), content = receiver.next(Packet.Type.HELLO, timeout=join_timeout)
+			except Receiver.TimeoutError:
+				logging.error("Cannot connect to remote server")
+				gui.failJoin()
+				break
 
-		if not client_id:
-			# TODO: Cambiare schermata sulla GUI
-			logging.debug("Successfully connected to remote server")
-			join_timeout = None
-		else:
-			# TODO: Aggiungere una webcam per il nuovo client
-			logging.debug(f"New client connected with ID '{client_id}'")
+			if not client_id:
+				gui.createWindow()
+				logging.debug("Successfully connected to remote server")
+				join_timeout = None
+			else:
+				# TODO: Aggiungere una webcam per il nuovo client
+				logging.debug(f"New client connected with ID '{client_id}'")
 
 def join_request(room):
 	global join_request_wait
@@ -53,8 +54,9 @@ if __name__ == "__main__":
 	receiver = Receiver(client)
 	receiver.start()
 
-	Thread(target=packets_chat, args=(receiver,)).start()
-	Thread(target=packets_hello, args=(receiver,)).start()
-
 	gui = Gui(join_request)
+
+	Thread(target=packets_chat, args=(receiver,)).start()
+	Thread(target=packets_hello, args=(gui, receiver)).start()
+
 	gui.root.mainloop()
