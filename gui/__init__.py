@@ -29,8 +29,8 @@ class Gui:
 		dialog_text = ttk.Label(self.dialog, text = "inserisci codice stanza:", font = FONT)
 		dialog_text.pack()
 		room_code = tk.StringVar()
-		input_entry= ttk.Entry(self.dialog, textvariable = room_code, font = FONT)
-		input_entry.pack()
+		self.input_entry= ttk.Entry(self.dialog, textvariable = room_code, font = FONT)
+		self.input_entry.pack()
 		self.submit = ttk.Button(self.dialog, text = "JOIN")
 		self.submit.pack(pady = 5)
 		self.submit.bind("<ButtonRelease>", lambda event:self.getJoinCode(event, room_code))
@@ -105,11 +105,13 @@ class Gui:
 		self.error.update()
 		if (room_code.get() != "" and str(self.submit["state"]) != "disabled"):
 			self.submit["state"] = "disabled"
+			self.input_entry["state"] = "disabled"
 			self.roomJoiner(room_code.get())
 
 	def failJoin(self):
 		self.error.config(text = "ERRORE: il server non risponde")
 		self.submit["state"] = "enabled"
+		self.input_entry["state"] = "enabled"
 
 	def createWindow(self):
 		self.dialog.pack_forget()
