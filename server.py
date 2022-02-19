@@ -31,6 +31,34 @@ def client_new_id(clients):
 
 	return client_id
 
+def client_get_id(client_address):
+	global clients
+
+	client_id = None
+	for client_id in clients:
+		if clients[client_id] == client_address:
+			client_id = client_id
+			break
+	return client_id
+
+def client_get_room(client_id):
+	room_id = None
+	for room in rooms:
+		if client_id in rooms[room]:
+			room_id = room
+			break
+	return room_id
+
+def client_get_all(client_address):
+	client_id = client_get_id(client_address)
+	if not client_id:
+		return (None, None)
+
+	room_id = client_get_room(client_id)
+	assert room_id	# Un client registrato è per forza in una stanza
+
+	return (client_id, room_id)
+
 def packet_join(source_address, room):
 	global clients, rooms, server
 
@@ -58,38 +86,45 @@ def packet_join(source_address, room):
 	clients[client_id] = source_address
 	rooms[room].add(client_id)
 
-def packet_chat(source_address, message):
+def packet_broadcast(client_id, room_id, packet):
 	global clients, rooms, server
 
-	source_client_id = None
-	for client_id in clients:
-		if clients[client_id] == source_address:
-			source_client_id = client_id
-			break
+	for remote_client_id in rooms[room_id].difference(client_id):
+		server.send(packet, clients[remote_client_id], client_id)
 
+def packet_quit(source_address, packet):
+	global clients, rooms
+
+	source_client_id, room_id = client_get_all(source_address)
 	if not source_client_id:
 		return
 
-	dest_room_id = None
-	for room in rooms:
-		if source_client_id in rooms[room]:
-			dest_room_id = room
-			break
-	assert dest_room_id
+	rooms[room_id].remove(source_client_id)
+	clients.pop(source_client_id)
 
-	# Rinvia il messaggio a tutti i client nella stanza
-	for client_id in rooms[dest_room_id]:
-		server.send(
-			Packet(Packet.Type.CHAT, message),
-			clients[client_id],
-			source_client_id
-		)
+	if len(rooms[room_id]) < 1:
+		rooms.pop(room_id)
+	else:
+		packet_broadcast(source_client_id, room_id, packet)
+
+def packet_forward(source_address, packet):
+	global clients, rooms, server
+
+	source_client_id, dest_room_id = client_get_all(source_address)
+	if not source_client_id:
+		return
+
+	packet_broadcast(source_client_id, dest_room_id, packet)
 
 def packet_handler(source_client, packet):
+	source_address = source_client[1]
+
 	if packet.type == Packet.Type.JOIN:
-		packet_join(source_client[1], packet.content)
-	elif packet.type == Packet.Type.CHAT:
-		packet_chat(source_client[1], packet.content)
+		packet_join(source_address, packet.content)
+	elif packet.type == Packet.Type.QUIT:
+		packet_quit(source_address, packet)
+	elif packet.type in (Packet.Type.CHAT,):
+		packet_forward(source_address, packet)
 	else:
 		logging.error(f"Received unsupported packet {packet.type}")
 
