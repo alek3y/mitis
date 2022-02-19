@@ -9,7 +9,7 @@
 
 import tkinter as tk
 from tkinter import ttk
-from PIL import ImageTk, Image
+from PIL import ImageTk
 from ttkthemes import ThemedTk
 
 
@@ -20,8 +20,8 @@ cam_status = False
 subtitles_status = False
 
 class Gui:
-	def __init__(self, cams, roomJoiner):
-		self.cams = cams
+	def __init__(self, roomJoiner):
+		self.cams = {}	#dizionario che conterrà le webcam dei client presenti
 		self.roomJoiner = roomJoiner
 		self.root = ThemedTk(theme = "breeze")	#finestra padre con tema breeze
 		self.root.title("Mitis")
@@ -123,7 +123,7 @@ class Gui:
 		self.input_entry["state"] = "enabled"
 
 	#aggiorna l'immagine di una webcam
-	def updateCams(self):
+	def updateCam(self):
 		if("a" in self.cams):
 			a = ImageTk.PhotoImage(image = self.cams["a"])
 			self.cam1.config(image = a)
@@ -131,11 +131,16 @@ class Gui:
 			self.cam2.config(image = a)
 			self.cam2.image = a
 
+	def addCam(self, client_id):
+		pass
+	def removeCam(self, client_id):
+		pass
+
 	#crea il layout della finestra dopo che si è entrati in una stanza
 	def createWindow(self):
 		self.dialog.pack_forget()
 
-		# creazione delle colonne e delle righe
+		#creazione delle colonne e delle righe
 		self.root.columnconfigure(0, weight = 1)
 		self.root.columnconfigure(1, weight = 15)
 		self.root.columnconfigure(2, weight = 1)
