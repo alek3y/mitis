@@ -1,6 +1,7 @@
+import threading
 import pyaudio
 import speech_recognition as sr
-from threading import Thread
+from threading import Thread, Semaphore
 from math import ceil #2.0 = 2 | 2.1 = 3
 
 TIME = 500 #millisecondi
@@ -8,7 +9,7 @@ FORMAT = pyaudio.paInt16
 CHANNELS = 1 #numero di canali audio da usare
 RATE = 44100 #numero di frame al secondo
 CHUNK = 8192 #numero di frame per ogni buffer
-CAPTION_SAMPLES_AMOUNT = 4
+CAPTION_SAMPLES_AMOUNT = 4 #numero di sample per ogni caption (indichiamo con sample un elemento del buffer audio)
 
 class SpeechRecognition(Thread):
     def __init__(self, recorder):
@@ -27,11 +28,11 @@ class SpeechRecognition(Thread):
 
     def run(self):
         while True:
-            if len(self.recorder.chunk_buffer) == CAPTION_SAMPLES_AMOUNT:
-                caption_audio_bytes = b''.join(self.recorder.chunk_buffer) #4 chunk joinati
-                text = self.caption(caption_audio_bytes)
-                print("client said: " + str(text))
-                self.recorder.chunk_buffer.clear()
+            self.recorder.sem.acquire(4)
+            caption_audio_bytes = b''.join(self.recorder.chunk_buffer) #4 chunk joinati
+            text = self.caption(caption_audio_bytes)
+            print("client said: " + str(text))
+            self.recorder.chunk_buffer.clear()
 
 
 class Audio(Thread):
@@ -46,6 +47,7 @@ class Audio(Thread):
         self.chunk_handler = chunk_handler
         self.recognizer = sr.Recognizer()
         self.chunk_buffer = []
+        self.sem = threading.Semaphore(0)
 
     def run(self):
         while True:
@@ -62,6 +64,7 @@ class Audio(Thread):
             frame_count -= CHUNK
         if frame_count < CHUNK:
             buffer.append(self.stream.read(frame_count))
+            self.sem.release()
         return b''.join(buffer)
 
 
