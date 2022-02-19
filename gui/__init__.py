@@ -123,18 +123,19 @@ class Gui:
 		self.input_entry["state"] = "enabled"
 
 	#aggiorna l'immagine di una webcam
-	def updateCam(self):
-		if("a" in self.cams):
-			a = ImageTk.PhotoImage(image = self.cams["a"])
-			self.cam1.config(image = a)
-			self.cam1.image = a
-			self.cam2.config(image = a)
-			self.cam2.image = a
+	def updateCam(self, client_id, new_image):
+		if(client_id in self.cams):
+			new_frame = ImageTk.PhotoImage(image = new_image)
+			self.cams[client_id].config(image = new_frame)
+			self.cams[client_id].image = new_frame
 
 	def addCam(self, client_id):
-		pass
+		self.cams[client_id] = ttk.Label(self.cams_container)
+		self.cams[client_id].pack(side = "left")
+
 	def removeCam(self, client_id):
-		pass
+		self.cams[client_id].pack_forget()
+		self.cams.pop(client_id, None)
 
 	#crea il layout della finestra dopo che si è entrati in una stanza
 	def createWindow(self):
@@ -199,10 +200,8 @@ class Gui:
 
 		tools.grid(column = 0, row = 0)
 
-		cams_container = ttk.Frame(self.root)
-		self.cam1 = ttk.Label(cams_container)
-		self.cam1.pack(side = "left")
-		cams_container.grid(column = 1, row = 0, sticky = "nw")
+		self.cams_container = ttk.Frame(self.root)
+		self.cams_container.grid(column = 1, row = 0, sticky = "nw")
 
 		# ttk.Label(self.root).grid(column = 0, row = 0, rowspan = 2, sticky="ewns")
 		# # ttk.Label(self.root, text = "cam zone", background = "red", foreground = "white").grid(column = 1, row = 0, sticky="ewns")
