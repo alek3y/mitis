@@ -1,12 +1,17 @@
-# https://www.pythontutorial.net/tkinter/tkinter-hello-world/
-# https://www.pythontutorial.net/tkinter/tkinter-grid/
-# pip3 install ttkthemes
-# keybinds: https://www.pythontutorial.net/tkinter/tkinter-event-binding/
-#TODO fixare bottone che si preme solo in focus
+# # https://www.pythontutorial.net/tkinter/tkinter-hello-world/
+# # https://www.pythontutorial.net/tkinter/tkinter-grid/
+# # pip3 install ttkthemes
+# # pip3 install pillow
+# pip3 install imutils
+# pip3 install opencv-python
+# # keybinds: https://www.pythontutorial.net/tkinter/tkinter-event-binding/
+# #TODO fixare bottone che si preme solo in focus
 
 import tkinter as tk
 from tkinter import ttk
+from PIL import ImageTk, Image
 from ttkthemes import ThemedTk
+
 
 FONT = ("Monospace", 11)
 PLACEHOLDER = "Inserisci un messaggio... "
@@ -15,7 +20,8 @@ cam_status = False
 subtitles_status = False
 
 class Gui:
-	def __init__(self, roomJoiner):
+	def __init__(self, cams, roomJoiner):
+		self.cams = cams
 		self.roomJoiner = roomJoiner
 		self.root = ThemedTk(theme = "breeze")	#finestra padre con tema breeze
 		self.root.title("Mitis")
@@ -89,6 +95,7 @@ class Gui:
 		if (text.get() == PLACEHOLDER):
 			textbox.delete(0, "end")	#elimina tutto il contenuto
 
+	#invio del messaggio nella chat di testo
 	def sendMessage(self, event, textbox, text):
 		if (text.get() != PLACEHOLDER):	#quando viene premuto il bottone invia impedisce in inviare il placeholder
 			#TODO invio del messaggio
@@ -100,6 +107,7 @@ class Gui:
 		if (text.get() == ""):
 			textbox.insert(0, PLACEHOLDER)
 
+	#invia il codice della stanza al server
 	def getJoinCode(self, event, room_code):
 		self.error.config(text = "")
 		self.error.update()
@@ -108,15 +116,26 @@ class Gui:
 			self.input_entry["state"] = "disabled"
 			self.roomJoiner(room_code.get())
 
+	#mostra un messaggio di errore nel caso non si riesca a unirsi ad una stanza
 	def failJoin(self):
 		self.error.config(text = "ERRORE: il server non risponde")
 		self.submit["state"] = "enabled"
 		self.input_entry["state"] = "enabled"
 
+	#aggiorna l'immagine di una webcam
+	def updateCams(self):
+		if("a" in self.cams):
+			a = ImageTk.PhotoImage(image = self.cams["a"])
+			self.cam1.config(image = a)
+			self.cam1.image = a
+			self.cam2.config(image = a)
+			self.cam2.image = a
+
+	#crea il layout della finestra dopo che si è entrati in una stanza
 	def createWindow(self):
 		self.dialog.pack_forget()
 
-		#creazione delle colonne e delle righe
+		# creazione delle colonne e delle righe
 		self.root.columnconfigure(0, weight = 1)
 		self.root.columnconfigure(1, weight = 15)
 		self.root.columnconfigure(2, weight = 1)
@@ -149,8 +168,8 @@ class Gui:
 
 		communication_tools.grid(column = 1, row = 1)
 
-		send_message_wrapper = ttk.Frame(self.root)
-		text = tk.StringVar()
+		send_message_wrapper = ttk.Frame(self.root)	#frame che contiene la entry del messaggio e il bottone di invio
+		text = tk.StringVar()	#variabile dove andrà salvato il testo della entry
 		textbox = ttk.Entry(send_message_wrapper, textvariable = text, width = 45, font = FONT)
 		textbox.insert(0, PLACEHOLDER)	# inserire del testo che fungerà da placeholder
 		textbox.bind("<FocusIn>", lambda event:self.clearTextbox(event, textbox, text))
@@ -162,7 +181,7 @@ class Gui:
 		send_button.pack(padx = 5, pady = 1)
 		send_message_wrapper.grid(column = 2, row = 1, sticky = "ne")
 
-		tools = ttk.Frame(self.root)	#frame che contiene tutti i tools
+		tools = ttk.Frame(self.root)	#frame che contiene tutti i tools secondari
 
 		filters_button= ttk.Button(tools, image = self.filters)
 		mask_button= ttk.Button(tools, image = self.mask)
@@ -175,10 +194,13 @@ class Gui:
 
 		tools.grid(column = 0, row = 0)
 
+		cams_container = ttk.Frame(self.root)
+		self.cam1 = ttk.Label(cams_container)
+		self.cam1.pack(side = "left")
+		cams_container.grid(column = 1, row = 0, sticky = "nw")
+
 		# ttk.Label(self.root).grid(column = 0, row = 0, rowspan = 2, sticky="ewns")
 		# # ttk.Label(self.root, text = "cam zone", background = "red", foreground = "white").grid(column = 1, row = 0, sticky="ewns")
 		# ttk.Label(self.root).grid(column = 2, row = 0, sticky="ewns")
 		# ttk.Label(self.root).grid(column = 1, row = 1, sticky="ewns")
 		# ttk.Label(self.root).grid(column = 2, row = 1, sticky="ewns")
-
-
