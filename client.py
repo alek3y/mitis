@@ -56,7 +56,18 @@ if __name__ == "__main__":
 
 	gui = Gui(join_request)
 
-	Thread(target=packets_chat, args=(receiver,)).start()
-	Thread(target=packets_hello, args=(gui, receiver)).start()
+	chat_thread = Thread(
+		target=packets_chat,
+		args=(receiver,),
+		daemon=True
+	)
+	hello_thread = Thread(
+		target=packets_hello,
+		args=(gui, receiver),
+		daemon=True
+	)
+
+	chat_thread.start()
+	hello_thread.start()
 
 	gui.root.mainloop()

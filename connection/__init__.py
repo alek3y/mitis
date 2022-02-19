@@ -113,7 +113,7 @@ class Receiver(Thread):
 		pass
 
 	def __init__(self, connection, handler=None):
-		Thread.__init__(self)
+		Thread.__init__(self, daemon=True)
 		self.connection = connection
 
 		self.handler = handler
