@@ -34,7 +34,7 @@ class Packet:
 		data = None
 		if self.type.value[1] == str:
 			data = self.content.encode("utf-8")
-		elif self.type != self.Type.HELLO:
+		elif self.type.value[1] != type(None):
 			data = self.content
 
 		if data:
@@ -61,7 +61,7 @@ class Packet:
 		content = None
 		if packet_type.value[1] == str:
 			content = data.decode("utf-8")
-		elif packet_type != Packet.Type.HELLO:
+		elif packet_type.value[1] != type(None):
 			content = data
 
 		return Packet(packet_type, content)
