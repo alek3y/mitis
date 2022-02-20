@@ -28,7 +28,8 @@ class SpeechRecognition(Thread):
 
     def run(self):
         while True:
-            self.recorder.sem.acquire(4)
+            for i in range(CAPTION_SAMPLES_AMOUNT):
+                self.recorder.sem.acquire()
             caption_audio_bytes = b''.join(self.recorder.chunk_buffer) #4 chunk joinati
             text = self.caption(caption_audio_bytes)
             print("client said: " + str(text))
@@ -66,5 +67,3 @@ class Audio(Thread):
             buffer.append(self.stream.read(frame_count))
             self.sem.release()
         return b''.join(buffer)
-
-
