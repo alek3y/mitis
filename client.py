@@ -43,11 +43,11 @@ def packets_hello(gui, receiver):
 
 			if not client_id:
 				gui.createWindow()
-				logging.debug("Successfully connected to remote server")
+				logging.info("Successfully connected to remote server")
 				join_timeout = None
 			else:
 				# TODO: Aggiungere una webcam per il nuovo client
-				logging.debug(f"New client connected with ID '{client_id}'")
+				logging.debug(f"Client '{client_id}' joined the room")
 
 def packets_generic(gui, receiver):
 	while True:
@@ -61,7 +61,7 @@ def packets_generic(gui, receiver):
 				logging.debug(f"Received message from '{client_id}': '{content}'")	# TODO: Da rimuovere
 			elif t == Packet.Type.QUIT:
 				# TODO: Rimuovere la webcam dalla GUI
-				logging.debug(f"Client with ID '{client_id}' left the room")
+				logging.debug(f"Client '{client_id}' left the room")
 
 def join_request(room):
 	global join_request_wait

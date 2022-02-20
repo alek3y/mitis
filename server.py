@@ -53,6 +53,8 @@ def client_get_room(client_id):
 		if client_id in rooms[room]:
 			room_id = room
 			break
+	assert room_id	# Un client registrato è per forza in una stanza
+
 	return room_id
 
 def client_get_all(client_address):
@@ -61,11 +63,13 @@ def client_get_all(client_address):
 		return (None, None)
 
 	room_id = client_get_room(client_id)
-	assert room_id	# Un client registrato è per forza in una stanza
-
 	return (client_id, room_id)
 
-def packet_join(source_address, room):
+def packet_heartbeat(client_id):
+	global heartbeats
+	heartbeats[client_id] = time.time()
+
+def packet_join(source_address, room_id):
 	global clients, rooms, server, heartbeats
 
 	if source_address in clients.values():
@@ -73,15 +77,14 @@ def packet_join(source_address, room):
 
 	client_id = client_new_id(clients)
 
-	# Segnala al client l'avvenuta elaborazione della richiesta
+	# Segnala al client l'avvenuta ricezione della richiesta
 	server.send(Packet(Packet.Type.HELLO), source_address, None)
 
-	if room not in rooms:
-		logging.debug(f"Creating room '{room}' for client {client_id, source_address}")
-		rooms[room] = set()
+	logging.info(f"Client '{client_id}' joined the room '{room_id}'")
+	if room_id not in rooms:
+		rooms[room_id] = set()
 	else:
-		logging.debug(f"Broadcasting new joined client {client_id, source_address} to room '{room}'")
-		for remote_client in rooms[room]:
+		for remote_client in rooms[room_id]:
 
 			# Annuncia ad ogni partecipante della stanza la presenza di un nuovo client
 			server.send(Packet(Packet.Type.HELLO), clients[remote_client], client_id)
@@ -90,67 +93,50 @@ def packet_join(source_address, room):
 			server.send(Packet(Packet.Type.HELLO), source_address, remote_client)
 
 	clients[client_id] = source_address
-	rooms[room].add(client_id)
-	heartbeats[client_id] = time.time()
+	rooms[room_id].add(client_id)
+	packet_heartbeat(client_id)
 
-def packet_heartbeat(source_address):
-	global heartbeats
-
-	source_client_id = client_get_id(source_address)
-	if not source_client_id:
-		return
-
-	heartbeats[source_client_id] = time.time()
-
-def packet_broadcast(client_id, room_id, packet):
+def packet_forward(client_id, room_id, packet):
 	global clients, rooms, server
 
 	for remote_client_id in rooms[room_id].difference(client_id):
 		server.send(packet, clients[remote_client_id], client_id)
 
-def packet_quit(source_address):
+def packet_quit(source_client_id, room_id):
 	global clients, rooms, heartbeats
-
-	source_client_id, room_id = client_get_all(source_address)
-	if not source_client_id:
-		return
 
 	rooms[room_id].remove(source_client_id)
 	clients.pop(source_client_id)
 	heartbeats.pop(source_client_id)
 
+	logging.info(f"Client '{source_client_id}' left the room '{room_id}'")
 	if len(rooms[room_id]) < 1:
-		logging.debug(f"Deleting room '{room_id}'")
+		logging.debug(f"Deleting empty room '{room_id}'")
 		rooms.pop(room_id)
 	else:
-		packet_broadcast(source_client_id, room_id, Packet(Packet.Type.QUIT))
-
-def packet_forward(source_address, packet):
-	global clients, rooms, server
-
-	source_client_id, dest_room_id = client_get_all(source_address)
-	if not source_client_id:
-		return
-
-	packet_broadcast(source_client_id, dest_room_id, packet)
+		packet_forward(source_client_id, room_id, Packet(Packet.Type.QUIT))
 
 def packet_handler(source_client, packet):
 	source_address = source_client[1]
 
 	if packet.type == Packet.Type.JOIN:
 		packet_join(source_address, packet.content)
-
-	elif packet.type == Packet.Type.HEARTBEAT:
-		packet_heartbeat(source_address)
-
-	elif packet.type == Packet.Type.QUIT:
-		packet_quit(source_address)
-
-	elif packet.type in (Packet.Type.CHAT,):
-		packet_forward(source_address, packet)
-
 	else:
-		logging.error(f"Received unsupported packet {packet.type}")
+		source_client_id, room_id = client_get_all(source_address)
+		if not source_client_id:
+			return
+
+		if packet.type == Packet.Type.HEARTBEAT:
+			packet_heartbeat(source_client_id)
+
+		elif packet.type == Packet.Type.QUIT:
+			packet_quit(source_client_id, room_id)
+
+		elif packet.type in (Packet.Type.CHAT,):
+			packet_forward(source_client_id, room_id, packet)
+
+		else:
+			logging.error(f"Received unsupported packet {packet.type}")
 
 def heartbeat_monitor():
 	global clients, heartbeats
@@ -159,8 +145,9 @@ def heartbeat_monitor():
 		clients_to_check = list(heartbeats.keys())
 		for client_id in clients_to_check:
 			if time.time() - heartbeats[client_id] >= HEARTBEAT_FAIL_DELAY:
-				logging.debug(f"Removing client with ID '{client_id}' for interrupted heartbeat")
-				packet_quit(clients[client_id])	# TODO: Non posso passare solo il client_id?
+				logging.debug(f"Removing client '{client_id}' for interrupted heartbeat")
+				room_id = client_get_room(client_id)
+				packet_quit(client_id, room_id)
 
 		time.sleep(HEARTBEAT_CHECK_INTERVAL)
 
