@@ -3,10 +3,12 @@ from gui import Gui
 from threading import Thread, Semaphore
 import sys
 import logging
+import time
 
 SERVER_ADDRESS = ("localhost", 4444)
 SERVER_REPLY_TIMEOUT = 5
 PACKET_TIMEOUT = 0.1
+HEARTBEAT_INTERVAL = 4
 
 logging.basicConfig(format="%(levelname)s: %(message)s", level=logging.DEBUG)
 client = Connection()
@@ -17,6 +19,14 @@ join_timeout = SERVER_REPLY_TIMEOUT
 def send(packet_type, content=None):
 	global client
 	client.send(Packet(packet_type, content), SERVER_ADDRESS)
+
+def heartbeat():
+	global join_request_wait
+
+	join_request_wait.acquire()
+	while True:
+		send(Packet.Type.HEARTBEAT)
+		time.sleep(HEARTBEAT_INTERVAL)
 
 def packets_hello(gui, receiver):
 	global join_request_wait, join_timeout
@@ -57,6 +67,9 @@ def join_request(room):
 	global join_request_wait
 
 	send(Packet.Type.JOIN, room)
+
+	# Lascia partire il thread HELLO e HEARTBEAT
+	join_request_wait.release()
 	join_request_wait.release()
 
 if __name__ == "__main__":
@@ -66,25 +79,28 @@ if __name__ == "__main__":
 	logging.debug("Building graphical user interface")
 	gui = Gui(join_request)
 
-	hello_thread = Thread(
+	logging.debug("Starting heartbeat periodic signal")
+	Thread(
+		target=heartbeat,
+		daemon=True
+	).start()
+
+	logging.debug("Starting packets handler threads")
+	Thread(
 		target=packets_hello,
 		args=(gui, receiver),
 		daemon=True
-	)
-	generic_thread = Thread(
+	).start()
+	Thread(
 		target=packets_generic,
 		args=(gui, receiver),
 		daemon=True
-	)
+	).start()
 
-	logging.debug(f"Starting packets handler threads")
-	hello_thread.start()
-	generic_thread.start()
-
-	logging.info(f"Showing interface")
+	logging.info("Showing interface")
 	gui.root.mainloop()
 
-	logging.info(f"Quitting")
+	logging.info("Quitting")
 
 	# Informa il server del quit se il collegamento è già avvenuto
 	if not join_timeout:

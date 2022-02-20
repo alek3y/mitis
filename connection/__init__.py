@@ -11,16 +11,17 @@ class Packet:
 	class Type(Enum):
 		RAW = (0, bytes)
 
-		# Gestione connessioni
-		HELLO = (1, type(None))
-		JOIN = (2, str)
-		QUIT = (3, type(None))
-
 		# Stream dei client
-		CHAT = (4, str)
-		CAPTIONS = (5, str)
-		AUDIO = (6, bytes)
-		VIDEO = (7, bytes)
+		CHAT = (1, str)
+		CAPTIONS = (2, str)
+		AUDIO = (3, bytes)
+		VIDEO = (4, bytes)
+
+		# Gestione connessioni
+		HELLO = (5, type(None))
+		QUIT = (6, type(None))
+		HEARTBEAT = (7, type(None))
+		JOIN = (8, str)
 
 	def __init__(self, packet_type, content=None):
 		if packet_type.value[1] != type(content):
