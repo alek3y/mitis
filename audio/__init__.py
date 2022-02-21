@@ -17,15 +17,6 @@ class SpeechRecognition(Thread):
         self.recognizer = sr.Recognizer()
         self.recorder = recorder
         
-    
-    def caption(self, audio):
-        audio_data = sr.AudioData(audio, RATE, 2) #Byte -> AudioData
-        try:
-            text = self.recognizer.recognize_google(audio_data=audio_data, language='it-IT')
-        except sr.UnknownValueError:
-            text = ""
-        return text
-
     def run(self):
         while True:
             for i in range(CAPTION_SAMPLES_AMOUNT):
@@ -35,8 +26,15 @@ class SpeechRecognition(Thread):
             print("client said: " + str(text))
             self.recorder.chunk_buffer.clear()
 
+    def caption(self, audio):
+        audio_data = sr.AudioData(audio, RATE, 2) #Byte -> AudioData
+        try:
+            text = self.recognizer.recognize_google(audio_data=audio_data, language='it-IT')
+        except sr.UnknownValueError:
+            text = ""
+        return text
 
-class Audio(Thread):
+class AudioHandler(Thread):
     def __init__(self, pyaudio, chunk_handler):
         Thread.__init__(self)
         self.stream = pyaudio.open(format=FORMAT,
@@ -48,11 +46,13 @@ class Audio(Thread):
         self.chunk_handler = chunk_handler
         self.recognizer = sr.Recognizer()
         self.chunk_buffer = []
+        self.audio_bytes = b''
         self.sem = threading.Semaphore(0)
 
     def run(self):
         while True:
             audio_bytes = self.record()
+            self.audio_bytes = audio_bytes
             self.chunk_handler(audio_bytes)
             self.chunk_buffer.append(audio_bytes)
     
@@ -67,3 +67,21 @@ class Audio(Thread):
             buffer.append(self.stream.read(frame_count))
             self.sem.release()
         return b''.join(buffer)
+
+class AudioPlayer(Thread):
+    def __init__(self, pyaudio, recorder):
+        Thread.__init__(self)
+        self.recorder = recorder
+        self.stream = pyaudio.open(format=FORMAT,
+                        channels=CHANNELS,
+                        rate=RATE,
+                        output=True,
+                        frames_per_buffer=CHUNK
+                        )
+
+    def run(self):
+        while True:
+            self.play()
+
+    def play(self):
+        self.stream.write(self.recorder.audio_bytes)
