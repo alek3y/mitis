@@ -15,6 +15,11 @@ from ttkthemes import ThemedTk
 
 FONT = ("Monospace", 11)
 PLACEHOLDER = "Inserisci un messaggio... "
+CAM_4_SIZE = (608, 342)
+CAM_6_SIZE = (480, 270)
+CAM_9_SIZE = (416, 243)
+CAM_16_SIZE = (320, 180)
+CAM_25_SIZE = (240, 135)
 mic_status = False
 cam_status = False
 subtitles_status = False
@@ -125,17 +130,65 @@ class Gui:
 	#aggiorna l'immagine di una webcam
 	def updateCam(self, client_id, new_image):
 		if(client_id in self.cams):
+			new_image = new_image.resize(self.cam_size)
 			new_frame = ImageTk.PhotoImage(image = new_image)
 			self.cams[client_id].config(image = new_frame)
 			self.cams[client_id].image = new_frame
 
 	def addCam(self, client_id):
 		self.cams[client_id] = ttk.Label(self.cams_container)
-		self.cams[client_id].pack(side = "left")
+		self.placeCams()
 
 	def removeCam(self, client_id):
 		self.cams[client_id].pack_forget()
 		self.cams.pop(client_id, None)
+
+	#metodo che riorganizza le posizioni delle webcam
+	def placeCams(self):
+		column_number = 0
+		row_number = 0
+		cam_number = len(self.cams)
+		counter = 1	#counter per la gestione delle webcam centrate
+		column_limit = 0	#ultima colonna scelta in base al numero di cam
+		if (cam_number <= 4):
+			self.cam_size = CAM_4_SIZE
+			column_limit = 1
+			center_3_cam = True
+			center_5_cam = False
+
+		elif (cam_number <= 6):
+			self.cam_size = CAM_6_SIZE
+			column_limit = 1
+			center_3_cam = False
+			center_5_cam = True
+		
+		elif(cam_number <= 9):
+			self.cam_size = CAM_9_SIZE
+			column_limit = 2
+
+		elif(cam_number <= 16):
+			self.cam_size = CAM_16_SIZE
+			column_limit = 3
+		
+		elif(cam_number <= 25):
+			self.cam_size = CAM_25_SIZE
+			column_limit = 4
+
+		for cam in self.cams:
+			if ((cam_number == 3 or cam_number == 5) and column_number == 0 and (row_number == 1 or row_number == 2)):	#gestisce il caso in cui le webcan stanno centrate
+				if(center_3_cam and counter == 3):	#webcam 3
+					self.cams[cam].grid(column = column_number, row = row_number, columnspan = 2)
+				elif(center_5_cam and counter == 5):	#webcam 5
+					self.cams[cam].grid(column = column_number, row = row_number, columnspan = 2)
+			else:
+				self.cams[cam].grid(column = column_number, row = row_number, columnspan = 1)
+
+			if (column_number == column_limit):
+				row_number += 1
+				column_number = 0
+			else: column_number += 1
+			counter += 1
+
 
 	#crea il layout della finestra dopo che si è entrati in una stanza
 	def createWindow(self):
@@ -201,7 +254,7 @@ class Gui:
 		tools.grid(column = 0, row = 0)
 
 		self.cams_container = ttk.Frame(self.root)
-		self.cams_container.grid(column = 1, row = 0, sticky = "nw")
+		self.cams_container.grid(column = 1, row = 0)
 
 		# ttk.Label(self.root).grid(column = 0, row = 0, rowspan = 2, sticky="ewns")
 		# # ttk.Label(self.root, text = "cam zone", background = "red", foreground = "white").grid(column = 1, row = 0, sticky="ewns")
