@@ -9,8 +9,9 @@
 
 import tkinter as tk
 from tkinter import ttk
-from PIL import ImageTk
+from PIL import ImageTk, Image
 from ttkthemes import ThemedTk
+import io
 
 
 FONT = ("Monospace", 11)
@@ -26,6 +27,7 @@ subtitles_status = False
 
 class Gui:
 	def __init__(self, roomJoiner):
+		self.cams_container = None
 		self.temp_client_list = []	#lista che conterrà le webcam temporanee durante la crezione della root
 		self.cams = {}	#dizionario che conterrà le webcam dei client presenti
 		self.roomJoiner = roomJoiner
@@ -129,9 +131,10 @@ class Gui:
 		self.input_entry["state"] = "enabled"
 
 	#aggiorna l'immagine di una webcam
-	def updateCam(self, client_id, new_image):
+	def updateCam(self, client_id, new_image_frame):
 		try:
 			if(client_id in self.cams):
+				new_image = Image.open(io.BytesIO(new_image_frame))
 				new_image = new_image.resize(self.cam_size)
 				new_frame = ImageTk.PhotoImage(image = new_image)
 				self.cams[client_id].config(image = new_frame)
@@ -142,22 +145,16 @@ class Gui:
 		except AttributeError as e:
 			pass
 			# print(e, "byte dell'immagine non valdi")
-			
-	def addCam(self, client_id):
-		try:
-			self.cams_container.winfo_exists()	#se la root è pronta
-			self.layoutCam(client_id)	#disegna la webcam
-		except AttributeError:
-			self.temp_client_list.append(client_id)	#altrimenti salva il client appena collegato in una lista temporanea
 
-	def layoutCam(self, client_id = None):
-		if (client_id == None):
-			for i in self.temp_client_list:
-				self.addCam(i)
-			self.temp_client_list.clear()
-		else:
-			self.cams[client_id] = ttk.Label(self.cams_container)
-			self.placeCams()
+	def addCam(self, client_id):
+			if not self.cams_container:	#se la root non è pronta
+				self.temp_client_list.append(client_id)	#salva il client appena collegato in una lista temporanea
+			else:
+				self.layoutCam(client_id)	#altrimenti disegna la webcam
+
+	def layoutCam(self, client_id):
+		self.cams[client_id] = ttk.Label(self.cams_container)
+		self.placeCams()
 
 	def removeCam(self, client_id):
 		self.cams[client_id].pack_forget()
@@ -275,7 +272,10 @@ class Gui:
 
 		self.cams_container = ttk.Frame(self.root)
 		self.cams_container.grid(column = 1, row = 0)
-		self.layoutCam()
+
+		for i in self.temp_client_list:
+			self.layoutCam(i)
+		self.temp_client_list.clear()
 		# ttk.Label(self.root).grid(column = 0, row = 0, rowspan = 2, sticky="ewns")
 		# # ttk.Label(self.root, text = "cam zone", background = "red", foreground = "white").grid(column = 1, row = 0, sticky="ewns")
 		# ttk.Label(self.root).grid(column = 2, row = 0, sticky="ewns")
