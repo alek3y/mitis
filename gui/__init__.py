@@ -6,7 +6,7 @@
 # pip3 install opencv-python
 # # keybinds: https://www.pythontutorial.net/tkinter/tkinter-event-binding/
 # #TODO fixare bottone che si preme solo in focus
-
+# #TODO placeCam con remove 
 import tkinter as tk
 from tkinter import ttk
 from PIL import ImageTk, Image
@@ -157,8 +157,9 @@ class Gui:
 		self.placeCams()
 
 	def removeCam(self, client_id):
-		self.cams[client_id].pack_forget()
+		self.cams[client_id].grid_forget()
 		self.cams.pop(client_id, None)
+		self.placeCams()
 
 	#metodo che riorganizza le posizioni delle webcam
 	def placeCams(self):
