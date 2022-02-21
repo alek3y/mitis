@@ -132,7 +132,7 @@ def packet_handler(source_client, packet):
 		elif packet.type == Packet.Type.QUIT:
 			packet_quit(source_client_id, room_id)
 
-		elif packet.type in (Packet.Type.CHAT,):
+		elif packet.type in (Packet.Type.VIDEO, Packet.Type.CHAT):
 			packet_forward(source_client_id, room_id, packet)
 
 		else:
