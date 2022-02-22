@@ -68,10 +68,8 @@ class AudioHandler(Thread):
             self.sem.release()
         return b''.join(buffer)
 
-class AudioPlayer(Thread):
-    def __init__(self, pyaudio, recorder):
-        Thread.__init__(self)
-        self.recorder = recorder
+class AudioPlayer:
+    def __init__(self, pyaudio):
         self.stream = pyaudio.open(format=FORMAT,
                         channels=CHANNELS,
                         rate=RATE,
@@ -79,9 +77,5 @@ class AudioPlayer(Thread):
                         frames_per_buffer=CHUNK
                         )
 
-    def run(self):
-        while True:
-            self.play()
-
-    def play(self):
-        self.stream.write(self.recorder.audio_bytes)
+    def play(self, audio_bytes):
+        self.stream.write(audio_bytes)
