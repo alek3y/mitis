@@ -21,26 +21,28 @@ webcam = cv2.VideoCapture(0)
 # TODO: https://github.com/PyImageSearch/imutils/pull/237
 #streaming = True
 
-JOIN_WAITING = 3	# Thread che aspettano per l'accesso ad una stanza
-join_request_wait = Semaphore(0)
+JOIN_WAITING = 2	# Thread che aspettano per la conferma di accesso
 join_timeout = SERVER_REPLY_TIMEOUT
+
+join_request = Semaphore(0)
+join_response = Semaphore(0)
 
 def send(packet_type, content=None):
 	global client
 	client.send(Packet(packet_type, content), SERVER_ADDRESS)
 
 def heartbeat():
-	global join_request_wait
+	global join_response
 
-	join_request_wait.acquire()
+	join_response.acquire()
 	while True:
 		send(Packet.Type.HEARTBEAT)
 		time.sleep(HEARTBEAT_INTERVAL)
 
 def streaming_video(gui, webcam):
-	global join_request_wait
+	global join_response
 
-	join_request_wait.acquire()	# TODO: Usare un altro semaforo quando gui.createWindow()
+	join_response.acquire()
 	gui.addCam(None)
 	while True:
 		frame = imutils.resize(
@@ -57,10 +59,10 @@ def streaming_video(gui, webcam):
 		gui.updateCam(None, frame_bytes)
 
 def packets_hello(gui, receiver):
-	global join_request_wait, join_timeout
+	global join_request, join_response, join_timeout
 
 	while True:
-		join_request_wait.acquire()
+		join_request.acquire()
 		while True:
 			try:
 				(client_id, _), _ = receiver.next(Packet.Type.HELLO, timeout=join_timeout)
@@ -73,6 +75,9 @@ def packets_hello(gui, receiver):
 				gui.createWindow()
 				logging.info("Successfully connected to remote server")
 				join_timeout = None
+
+				for i in range(JOIN_WAITING):
+					join_response.release()
 			else:
 				gui.addCam(client_id)
 				logging.debug(f"Client '{client_id}' joined the room")
@@ -96,20 +101,18 @@ def packets_video(gui, receiver):
 		(client_id, _), frame_bytes = receiver.next(Packet.Type.VIDEO)
 		gui.updateCam(client_id, frame_bytes)
 
-def join_request(room):
-	global join_request_wait
+def ask_join(room):
+	global join_request
 
 	send(Packet.Type.JOIN, room)
-
-	for i in range(JOIN_WAITING):
-		join_request_wait.release()
+	join_request.release()
 
 if __name__ == "__main__":
 	receiver = Receiver(client)
 	receiver.start()
 
 	logging.debug("Building graphical user interface")
-	gui = Gui(join_request)
+	gui = Gui(ask_join)
 
 	logging.debug("Starting heartbeat periodic signal")
 	Thread(
