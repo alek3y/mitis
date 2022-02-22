@@ -6,27 +6,24 @@
 # pip3 install opencv-python
 # # keybinds: https://www.pythontutorial.net/tkinter/tkinter-event-binding/
 # #TODO fixare bottone che si preme solo in focus
-# #TODO placeCam con remove 
 import tkinter as tk
 from tkinter import ttk
 from PIL import ImageTk, Image
 from ttkthemes import ThemedTk
 import io
+import math
 
 
 FONT = ("Monospace", 11)
 PLACEHOLDER = "Inserisci un messaggio... "
-CAM_4_SIZE = (608, 342)
-CAM_6_SIZE = (480, 270)
-CAM_9_SIZE = (416, 243)
-CAM_16_SIZE = (320, 180)
-CAM_25_SIZE = (240, 135)
 mic_status = False
 cam_status = False
 subtitles_status = False
 
 class Gui:
 	def __init__(self, roomJoiner):
+		self.grid_size = 1
+		self.counter_size = 1
 		self.cams_container = None
 		self.temp_client_list = []	#lista che conterrà le webcam temporanee durante la crezione della root
 		self.cams = {}	#dizionario che conterrà le webcam dei client presenti
@@ -166,47 +163,22 @@ class Gui:
 		column_number = 0
 		row_number = 0
 		cam_number = len(self.cams)
-		counter = 1	#counter per la gestione delle webcam centrate
-		column_limit = 0	#ultima colonna scelta in base al numero di cam
-		if (cam_number <= 4):
-			self.cam_size = CAM_4_SIZE
-			column_limit = 1
-			center_3_cam = True
-			center_5_cam = False
+		if (cam_number > (self.grid_size**2)):
+			self.grid_size += 1
+			self.counter_size += 4.10
+		elif (cam_number <= ((self.grid_size - 1)**2)):
+			self.grid_size -= 1
+			self.counter_size -= 4.10
 
-		elif (cam_number <= 6):
-			self.cam_size = CAM_6_SIZE
-			column_limit = 1
-			center_3_cam = False
-			center_5_cam = True
-		
-		elif(cam_number <= 9):
-			self.cam_size = CAM_9_SIZE
-			column_limit = 2
-
-		elif(cam_number <= 16):
-			self.cam_size = CAM_16_SIZE
-			column_limit = 3
-		
-		elif(cam_number <= 25):
-			self.cam_size = CAM_25_SIZE
-			column_limit = 4
+		self.cam_size = (int(math.ceil(16 * (40-(self.grid_size + self.counter_size)))), int(math.ceil(9 * (40-(self.grid_size + self.counter_size)))))	#decide la greandezza delle webcam
 
 		for cam in self.cams:
-			if ((cam_number == 3 or cam_number == 5) and column_number == 0 and (row_number == 1 or row_number == 2)):	#gestisce il caso in cui le webcan stanno centrate
-				if(center_3_cam and counter == 3):	#webcam 3
-					self.cams[cam].grid(column = column_number, row = row_number, columnspan = 2)
-				elif(center_5_cam and counter == 5):	#webcam 5
-					self.cams[cam].grid(column = column_number, row = row_number, columnspan = 2)
-			else:
-				self.cams[cam].grid(column = column_number, row = row_number, columnspan = 1)
+			self.cams[cam].grid(column = column_number, row = row_number, columnspan = 1)
 
-			if (column_number == column_limit):
+			if (column_number == (self.grid_size - 1)):
 				row_number += 1
 				column_number = 0
 			else: column_number += 1
-			counter += 1
-
 
 	#crea il layout della finestra dopo che si è entrati in una stanza
 	def createWindow(self):
@@ -214,7 +186,7 @@ class Gui:
 
 		#creazione delle colonne e delle righe
 		self.root.columnconfigure(0, weight = 1)
-		self.root.columnconfigure(1, weight = 15)
+		self.root.columnconfigure(1, weight = 17)
 		self.root.columnconfigure(2, weight = 1)
 		self.root.rowconfigure(0, weight = 10)
 		self.root.rowconfigure(1, weight = 1)
@@ -247,7 +219,7 @@ class Gui:
 
 		send_message_wrapper = ttk.Frame(self.root)	#frame che contiene la entry del messaggio e il bottone di invio
 		text = tk.StringVar()	#variabile dove andrà salvato il testo della entry
-		textbox = ttk.Entry(send_message_wrapper, textvariable = text, width = 45, font = FONT)
+		textbox = ttk.Entry(send_message_wrapper, textvariable = text, width = 40, font = FONT)
 		textbox.insert(0, PLACEHOLDER)	# inserire del testo che fungerà da placeholder
 		textbox.bind("<FocusIn>", lambda event:self.clearTextbox(event, textbox, text))
 		textbox.bind("<FocusOut>", lambda event:self.addPlaceholder(event, textbox, text))
