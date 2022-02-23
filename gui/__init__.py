@@ -46,6 +46,7 @@ class Gui:
 		self.input_entry.pack()
 		self.submit = ttk.Button(self.dialog, text = "JOIN")
 		self.submit.pack(pady = 5)
+		self.root.bind("<Return>", lambda event:self.getJoinCode(event, room_code))
 		self.submit.bind("<ButtonRelease>", lambda event:self.getJoinCode(event, room_code))
 		self.error = ttk.Label(self.dialog, text = "", foreground = "red", font = FONT)
 		self.error.pack()
@@ -60,7 +61,6 @@ class Gui:
 				self.textbox["font"] = ("Monospace", 9)
 			if (event.width > 1200):
 				self.textbox["font"] = FONT
-			print(event.width, event.height)
 
 	def micToggle(self, event, mute_button, mic_off, mic_on, input_source = "none"):
 		global mic_status
@@ -186,11 +186,9 @@ class Gui:
 		elif (cam_number <= ((self.grid_size - 1)**2)):
 			self.grid_size -= 1
 			self.counter_size -= 4.10
-		print("diff:", self.width_screen/self.actual_window_width)
-		print("diff2:", self.height_screen/self.actual_window_height)
 
 		self.cam_size = (int(math.ceil(16 * (40 - (self.grid_size + self.counter_size) - self.width_screen/self.actual_window_width))),
-						int(math.ceil(9 * (40 - (self.grid_size + self.counter_size) - self.height_screen/self.actual_window_height))))	#decide la greandezza delle webcam
+						int(math.ceil(9 * (40 - (self.grid_size + self.counter_size) - self.height_screen/self.actual_window_height))))	#decide la grandezza delle webcam
 		for cam in temp_cams:
 			self.cams[cam].grid(column = column_number, row = row_number, columnspan = 1)
 
