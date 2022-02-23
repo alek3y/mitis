@@ -30,17 +30,19 @@ class Gui:
 		self.roomJoiner = roomJoiner
 		self.root = ThemedTk(theme = "breeze")	#finestra padre con tema breeze
 		self.root.title("Mitis")
-		width_screen = self.root.winfo_screenwidth()	# larghezza dello schermo
-		heigth_screen = self.root.winfo_screenheight() # altezza dello schermo
-		screen_size = str(width_screen) + "x" + str(heigth_screen)
-		self.root.geometry(screen_size)
-		self.root.minsize(800, 500)	#grandezza minima finestra
+		self.width_screen = self.root.winfo_screenwidth()	# larghezza dello schermo
+		self.height_screen = self.root.winfo_screenheight() # altezza dello schermo
+		self.root.geometry(f"{self.width_screen}x{self.height_screen}")
+		self.root.minsize(700, 400)	#grandezza minima finestra
+		self.actual_window_width = self.width_screen
+		self.actual_window_height = self.height_screen
 
 		self.dialog = ttk.Frame(self.root)
 		dialog_text = ttk.Label(self.dialog, text = "inserisci codice stanza:", font = FONT)
 		dialog_text.pack()
 		room_code = tk.StringVar()
 		self.input_entry= ttk.Entry(self.dialog, textvariable = room_code, font = FONT)
+		self.input_entry.focus()
 		self.input_entry.pack()
 		self.submit = ttk.Button(self.dialog, text = "JOIN")
 		self.submit.pack(pady = 5)
@@ -48,6 +50,17 @@ class Gui:
 		self.error = ttk.Label(self.dialog, text = "", foreground = "red", font = FONT)
 		self.error.pack()
 		self.dialog.pack(expand = True)
+
+	def resizeWindow(self, event):
+		if event.widget == self.root:
+			self.actual_window_height = event.height
+			self.actual_window_width = event.width
+			self.textbox["width"] = int(1/50 * event.width)
+			if(event.width < 1200):
+				self.textbox["font"] = ("Monospace", 9)
+			if (event.width > 1200):
+				self.textbox["font"] = FONT
+			print(event.width, event.height)
 
 	def micToggle(self, event, mute_button, mic_off, mic_on, input_source = "none"):
 		global mic_status
@@ -96,21 +109,21 @@ class Gui:
 				message.config(text = "subtitles yes")
 			message.grid(column = 0, row = 0, sticky = "se")
 
-	def clearTextbox(self, event, textbox, text):
+	def clearTextbox(self, event, text):
 		if (text.get() == PLACEHOLDER):
-			textbox.delete(0, "end")	#elimina tutto il contenuto
+			self.textbox.delete(0, "end")	#elimina tutto il contenuto
 
 	#invio del messaggio nella chat di testo
-	def sendMessage(self, event, textbox, text):
+	def sendMessage(self, event, text):
 		if (text.get() != PLACEHOLDER):	#quando viene premuto il bottone invia impedisce in inviare il placeholder
 			#TODO invio del messaggio
 			print(text.get())
-		textbox.delete(0, "end")
-		textbox.insert(0, PLACEHOLDER)
+		self.textbox.delete(0, "end")
+		self.textbox.insert(0, PLACEHOLDER)
 
-	def addPlaceholder(self, event, textbox, text):
+	def addPlaceholder(self, event, text):
 		if (text.get() == ""):
-			textbox.insert(0, PLACEHOLDER)
+			self.textbox.insert(0, PLACEHOLDER)
 
 	#invia il codice della stanza al server
 	def getJoinCode(self, event, room_code):
@@ -130,6 +143,9 @@ class Gui:
 	#aggiorna l'immagine di una webcam
 	def updateCam(self, client_id, new_image_frame):
 		try:
+
+			self.cam_size = (int(math.ceil(16 * (40 - (self.grid_size + self.counter_size) - (self.width_screen/self.actual_window_width)*5))),
+							int(math.ceil(9 * (40 - (self.grid_size + self.counter_size) - (self.height_screen/self.actual_window_height)*5))))	#decide la grandezza delle webcam
 			if(client_id in self.cams):
 				new_image = Image.open(io.BytesIO(new_image_frame))
 				new_image = new_image.resize(self.cam_size)
@@ -170,8 +186,11 @@ class Gui:
 		elif (cam_number <= ((self.grid_size - 1)**2)):
 			self.grid_size -= 1
 			self.counter_size -= 4.10
+		print("diff:", self.width_screen/self.actual_window_width)
+		print("diff2:", self.height_screen/self.actual_window_height)
 
-		self.cam_size = (int(math.ceil(16 * (40-(self.grid_size + self.counter_size)))), int(math.ceil(9 * (40-(self.grid_size + self.counter_size)))))	#decide la greandezza delle webcam
+		self.cam_size = (int(math.ceil(16 * (40 - (self.grid_size + self.counter_size) - self.width_screen/self.actual_window_width))),
+						int(math.ceil(9 * (40 - (self.grid_size + self.counter_size) - self.height_screen/self.actual_window_height))))	#decide la greandezza delle webcam
 		for cam in temp_cams:
 			self.cams[cam].grid(column = column_number, row = row_number, columnspan = 1)
 
@@ -219,16 +238,16 @@ class Gui:
 
 		send_message_wrapper = ttk.Frame(self.root)	#frame che contiene la entry del messaggio e il bottone di invio
 		text = tk.StringVar()	#variabile dove andrà salvato il testo della entry
-		textbox = ttk.Entry(send_message_wrapper, textvariable = text, width = 40, font = FONT)
-		textbox.insert(0, PLACEHOLDER)	# inserire del testo che fungerà da placeholder
-		textbox.bind("<FocusIn>", lambda event:self.clearTextbox(event, textbox, text))
-		textbox.bind("<FocusOut>", lambda event:self.addPlaceholder(event, textbox, text))
-		textbox.pack(side = "left", ipady = 3)
+		self.textbox = ttk.Entry(send_message_wrapper, textvariable = text, width = 40, font = FONT)
+		self.textbox.insert(0, PLACEHOLDER)	# inserire del testo che fungerà da placeholder
+		self.textbox.bind("<FocusIn>", lambda event:self.clearTextbox(event, text))
+		self.textbox.bind("<FocusOut>", lambda event:self.addPlaceholder(event, text))
+		self.textbox.pack(side = "left", ipady = 3)
 
 		send_button = ttk.Button(send_message_wrapper, image = self.send)
-		send_button.bind("<ButtonRelease>", lambda event:self.sendMessage(event, textbox, text))
+		send_button.bind("<ButtonRelease>", lambda event:self.sendMessage(event, self.textbox, text))
 		send_button.pack(padx = 5, pady = 1)
-		send_message_wrapper.grid(column = 2, row = 1, sticky = "ne")
+		send_message_wrapper.grid(column = 2, row = 1, sticky = "nw")
 
 		tools = ttk.Frame(self.root)	#frame che contiene tutti i tools secondari
 
@@ -249,6 +268,8 @@ class Gui:
 		for i in self.temp_client_list:
 			self.layoutCam(i)
 		self.temp_client_list.clear()
+
+		self.root.bind("<Configure>", self.resizeWindow)
 		# ttk.Label(self.root).grid(column = 0, row = 0, rowspan = 2, sticky="ewns")
 		# # ttk.Label(self.root, text = "cam zone", background = "red", foreground = "white").grid(column = 1, row = 0, sticky="ewns")
 		# ttk.Label(self.root).grid(column = 2, row = 0, sticky="ewns")
