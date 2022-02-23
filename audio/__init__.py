@@ -37,12 +37,7 @@ class SpeechRecognition(Thread):
 class AudioHandler(Thread):
     def __init__(self, pyaudio, chunk_handler):
         Thread.__init__(self, daemon=True)
-        self.stream = pyaudio.open(format=FORMAT,
-                        channels=CHANNELS,
-                        rate=RATE,
-                        input=True,
-                        frames_per_buffer=CHUNK
-                        )
+        self.pyaudio = pyaudio
         self.chunk_handler = chunk_handler
         self.recognizer = sr.Recognizer()
         self.chunk_buffer = []
@@ -50,6 +45,12 @@ class AudioHandler(Thread):
         self.sem = threading.Semaphore(0)
 
     def run(self):
+        self.stream = pyaudio.open(format=FORMAT,
+                        channels=CHANNELS,
+                        rate=RATE,
+                        input=True,
+                        frames_per_buffer=CHUNK
+                        )
         while True:
             audio_bytes = self.record()
             self.audio_bytes = audio_bytes
