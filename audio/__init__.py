@@ -45,7 +45,7 @@ class AudioHandler(Thread):
         self.sem = threading.Semaphore(0)
 
     def run(self):
-        self.stream = pyaudio.open(format=FORMAT,
+        self.stream = self.pyaudio.open(format=FORMAT,
                         channels=CHANNELS,
                         rate=RATE,
                         input=True,
