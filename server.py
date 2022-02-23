@@ -99,7 +99,7 @@ def packet_join(source_address, room_id):
 def packet_forward(client_id, room_id, packet):
 	global clients, rooms, server
 
-	for remote_client_id in rooms[room_id].difference(client_id):
+	for remote_client_id in rooms[room_id] - {client_id,}:
 		server.send(packet, clients[remote_client_id], client_id)
 
 def packet_quit(source_client_id, room_id):
