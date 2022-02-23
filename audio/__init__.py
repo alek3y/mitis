@@ -13,7 +13,7 @@ CAPTION_SAMPLES_AMOUNT = 4 #numero di sample per ogni caption (indichiamo con sa
 
 class SpeechRecognition(Thread):
     def __init__(self, recorder):
-        Thread.__init__(self)
+        Thread.__init__(self, daemon=True)
         self.recognizer = sr.Recognizer()
         self.recorder = recorder
         
@@ -36,7 +36,7 @@ class SpeechRecognition(Thread):
 
 class AudioHandler(Thread):
     def __init__(self, pyaudio, chunk_handler):
-        Thread.__init__(self)
+        Thread.__init__(self, daemon=True)
         self.stream = pyaudio.open(format=FORMAT,
                         channels=CHANNELS,
                         rate=RATE,
