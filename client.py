@@ -1,4 +1,6 @@
 from connection import *
+from pyaudio import PyAudio
+from audio import *
 from gui import Gui
 from threading import Thread, Semaphore
 import cv2, imutils
@@ -17,6 +19,7 @@ WEBCAM_QUALITY = 80
 logging.basicConfig(format="%(levelname)s: %(message)s", level=logging.DEBUG)
 client = Connection()
 webcam = cv2.VideoCapture(0)
+audio = PyAudio()
 
 # TODO: https://github.com/PyImageSearch/imutils/pull/237
 #streaming = True
@@ -58,7 +61,7 @@ def streaming_video(gui, webcam):
 		send(Packet.Type.VIDEO, frame_bytes)
 		gui.updateCam(None, frame_bytes)
 
-def packets_hello(gui, receiver):
+def packets_hello(gui, recorder, receiver):
 	global join_request, join_response, join_timeout
 
 	while True:
@@ -78,6 +81,9 @@ def packets_hello(gui, receiver):
 
 				for i in range(JOIN_WAITING):
 					join_response.release()
+
+				logging.debug("Starting audio recorder")
+				recorder.start()
 			else:
 				gui.addCam(client_id)
 				logging.debug(f"Client '{client_id}' joined the room")
@@ -101,6 +107,11 @@ def packets_video(gui, receiver):
 		(client_id, _), frame_bytes = receiver.next(Packet.Type.VIDEO)
 		gui.updateCam(client_id, frame_bytes)
 
+def packets_audio(player, receiver):
+	while True:
+		_, audio_bytes = receiver.next(Packet.Type.AUDIO)
+		player.play(audio_bytes)
+
 def ask_join(room):
 	global join_request
 
@@ -110,6 +121,12 @@ def ask_join(room):
 if __name__ == "__main__":
 	receiver = Receiver(client)
 	receiver.start()
+
+	recorder = AudioHandler(
+		audio,
+		lambda b: send(Packet.Type.AUDIO, b)
+	)
+	player = AudioPlayer(audio)
 
 	logging.debug("Building graphical user interface")
 	gui = Gui(ask_join)
@@ -130,6 +147,11 @@ if __name__ == "__main__":
 	logging.debug("Starting packets handler threads")
 	Thread(
 		target=packets_hello,
+		args=(gui, recorder, receiver),
+		daemon=True
+	).start()
+	Thread(
+		target=packets_generic,
 		args=(gui, receiver),
 		daemon=True
 	).start()
@@ -139,8 +161,8 @@ if __name__ == "__main__":
 		daemon=True
 	).start()
 	Thread(
-		target=packets_generic,
-		args=(gui, receiver),
+		target=packets_audio,
+		args=(player, receiver),
 		daemon=True
 	).start()
 

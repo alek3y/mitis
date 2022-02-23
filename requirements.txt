@@ -1,4 +1,4 @@
-PyAudio==0.2.11
+git+https://github.com/alek3y/pyaudio
 SpeechRecognition==3.8.1
 ttkthemes==3.2.2
 Pillow==8.4.0
