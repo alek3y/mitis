@@ -162,7 +162,7 @@ class Gui:
 	def placeCams(self):
 		column_number = 0
 		row_number = 0
-		temp_cams = self.cams
+		temp_cams = list(self.cams.keys())
 		cam_number = len(temp_cams)
 		if (cam_number > (self.grid_size**2)):
 			self.grid_size += 1
@@ -173,7 +173,7 @@ class Gui:
 
 		self.cam_size = (int(math.ceil(16 * (40-(self.grid_size + self.counter_size)))), int(math.ceil(9 * (40-(self.grid_size + self.counter_size)))))	#decide la greandezza delle webcam
 		for cam in temp_cams:
-			temp_cams[cam].grid(column = column_number, row = row_number, columnspan = 1)
+			self.cams[cam].grid(column = column_number, row = row_number, columnspan = 1)
 
 			if (column_number == (self.grid_size - 1)):
 				row_number += 1
