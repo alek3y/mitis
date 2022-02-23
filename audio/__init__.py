@@ -55,6 +55,7 @@ class AudioHandler(Thread):
             self.audio_bytes = audio_bytes
             self.chunk_handler(audio_bytes)
             self.chunk_buffer.append(audio_bytes)
+            self.sem.release()
     
     def record(self):
         buffer = []
@@ -65,7 +66,6 @@ class AudioHandler(Thread):
             frame_count -= CHUNK
         if frame_count < CHUNK:
             buffer.append(self.stream.read(frame_count))
-            self.sem.release()
         return b''.join(buffer)
 
 class AudioPlayer:
