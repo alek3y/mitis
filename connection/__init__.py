@@ -1,5 +1,6 @@
 from enum import Enum
 from threading import Thread, Semaphore
+import queue
 import socket
 import re
 import string
@@ -120,7 +121,7 @@ class Receiver(Thread):
 
 		self.handler = handler
 		self.received = {
-			t: (Semaphore(0), [])
+			t: queue.Queue()
 			for t in Packet.Type
 		}
 
@@ -132,17 +133,12 @@ class Receiver(Thread):
 				continue
 
 			if not self.handler:
-				lock, packets = self.received[packet.type]
-				lock.release()
-				packets.append((client, packet.content))
+				self.received[packet.type].put((client, packet.content))
 			else:
 				self.handler(client, packet)
 
 	def next(self, packet_type, timeout=None):
-		lock, packets = self.received[packet_type]
-
-		lock.acquire(timeout=timeout)
 		try:
-			return packets.pop(0)
-		except IndexError:
+			return self.received[packet_type].get(timeout=timeout)
+		except queue.Empty:
 			raise self.TimeoutError("packet request timed out")
