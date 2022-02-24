@@ -8,7 +8,7 @@ TIME = 500 #millisecondi
 FORMAT = pyaudio.paInt16
 CHANNELS = 1 #numero di canali audio da usare
 RATE = 44100 #numero di frame al secondo
-CHUNK = 8192 #numero di frame per ogni buffer
+CHUNK = 1024 #numero di frame per ogni buffer
 CAPTION_SAMPLES_AMOUNT = 4 #numero di sample per ogni caption (indichiamo con sample un elemento del buffer audio)
 
 class SpeechRecognition(Thread):
@@ -56,26 +56,19 @@ class AudioHandler(Thread):
             self.audio_bytes = audio_bytes
             self.chunk_handler(audio_bytes)
             self.chunk_buffer.append(audio_bytes)
-            self.sem.release()
+            #self.sem.release()
     
     def record(self):
-        buffer = []
-        #https://stackoverflow.com/a/66628753
-        frame_count = ceil(RATE*TIME/1000) #numero di frame da leggere
-        for i in range(0, int(RATE / CHUNK * (TIME / 1000))):
-            buffer.append(self.stream.read(CHUNK, exception_on_overflow=False))
-            frame_count -= CHUNK
-        if frame_count < CHUNK:
-            buffer.append(self.stream.read(frame_count))
-        return b''.join(buffer)
+        return self.stream.read(CHUNK, exception_on_overflow=False)
 
 class AudioPlayer:
-    def __init__(self, pyaudio):
+    def __init__(self, pyaudio, audio_next):
         self.stream = pyaudio.open(format=FORMAT,
                         channels=CHANNELS,
                         rate=RATE,
                         output=True,
-                        frames_per_buffer=CHUNK
+                        frames_per_buffer=CHUNK,
+                        stream_callback=lambda _, chunk, time, status: audio_next(chunk)
                         )
 
     def play(self, audio_bytes):

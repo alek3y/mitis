@@ -142,3 +142,6 @@ class Receiver(Thread):
 			return self.received[packet_type].get(timeout=timeout)
 		except queue.Empty:
 			raise self.TimeoutError("packet request timed out")
+
+	def pending(self, packet_type):
+		return self.received[packet_type].qsize()
