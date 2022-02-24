@@ -8,6 +8,7 @@
 # #TODO fixare bottone che si preme solo in focus
 import tkinter as tk
 from tkinter import ttk
+from tkinter.scrolledtext import ScrolledText
 from PIL import ImageTk, Image
 from ttkthemes import ThemedTk
 import io
@@ -22,7 +23,7 @@ subtitles_status = False
 
 class Gui:
 	def __init__(self, roomJoiner):
-		self.grid_size = 1
+		self.grid_size = 1	#numero di righe e di colonne delle cam (dato che è un quadrato: colonne = righe)
 		self.counter_size = 1
 		self.cams_container = None
 		self.temp_client_list = []	#lista che conterrà le webcam temporanee durante la crezione della root
@@ -57,6 +58,7 @@ class Gui:
 			self.actual_window_height = event.height
 			self.actual_window_width = event.width
 			self.textbox["width"] = int(1/50 * event.width)
+			self.text_chat["width"] = int(1/35 * event.width)
 			if(event.width < 1200):
 				self.textbox["font"] = ("Monospace", 9)
 			if (event.width > 1200):
@@ -113,16 +115,20 @@ class Gui:
 		if (text.get() == PLACEHOLDER):
 			self.textbox.delete(0, "end")	#elimina tutto il contenuto
 
+	def receiveMessage(self, nome, message):
+		pass
+
 	#invio del messaggio nella chat di testo
 	def sendMessage(self, event, text):
-		if (text.get() != PLACEHOLDER):	#quando viene premuto il bottone invia impedisce in inviare il placeholder
+		if (text.get() != PLACEHOLDER and text.get()):	#quando viene premuto il bottone invia impedisce in inviare il placeholder o una stringa vuota
 			#TODO invio del messaggio
-			print(text.get())
-		self.textbox.delete(0, "end")
-		self.textbox.insert(0, PLACEHOLDER)
+			self.text_chat.configure(state='normal')
+			self.text_chat.insert("end", "\n" + text.get())
+			self.text_chat.configure(state='disabled')
+			self.textbox.delete(0, "end")
 
 	def addPlaceholder(self, event, text):
-		if (text.get() == ""):
+		if (not text.get()):
 			self.textbox.insert(0, PLACEHOLDER)
 
 	#invia il codice della stanza al server
@@ -143,9 +149,8 @@ class Gui:
 	#aggiorna l'immagine di una webcam
 	def updateCam(self, client_id, new_image_frame):
 		try:
-
-			self.cam_size = (int(math.ceil(16 * (40 - (self.grid_size + self.counter_size) - (self.width_screen/self.actual_window_width)*5))),
-							int(math.ceil(9 * (40 - (self.grid_size + self.counter_size) - (self.height_screen/self.actual_window_height)*5))))	#decide la grandezza delle webcam
+			self.cam_size = (int(math.ceil(16 * (40 - math.log(self.grid_size**2) * 6 - (self.width_screen / (self.actual_window_width/6))))),
+							int(math.ceil(9 * (40 - math.log(self.grid_size**2) * 6 - (self.height_screen / (self.actual_window_height/6))))))	#decide la grandezza delle webcam
 			if(client_id in self.cams):
 				new_image = Image.open(io.BytesIO(new_image_frame))
 				new_image = new_image.resize(self.cam_size)
@@ -187,8 +192,6 @@ class Gui:
 			self.grid_size -= 1
 			self.counter_size -= 4.10
 
-		self.cam_size = (int(math.ceil(16 * (40 - (self.grid_size + self.counter_size) - self.width_screen/self.actual_window_width))),
-						int(math.ceil(9 * (40 - (self.grid_size + self.counter_size) - self.height_screen/self.actual_window_height))))	#decide la grandezza delle webcam
 		for cam in temp_cams:
 			self.cams[cam].grid(column = column_number, row = row_number, columnspan = 1)
 
@@ -243,9 +246,10 @@ class Gui:
 		self.textbox.pack(side = "left", ipady = 3)
 
 		send_button = ttk.Button(send_message_wrapper, image = self.send)
-		send_button.bind("<ButtonRelease>", lambda event:self.sendMessage(event, self.textbox, text))
+		send_button.bind("<ButtonRelease>", lambda event:self.sendMessage(event, text))
+		self.root.bind("<Return>", lambda event:self.sendMessage(event, text))
 		send_button.pack(padx = 5, pady = 1)
-		send_message_wrapper.grid(column = 2, row = 1, sticky = "nw")
+		send_message_wrapper.grid(column = 2, row = 1, sticky = "ne")
 
 		tools = ttk.Frame(self.root)	#frame che contiene tutti i tools secondari
 
@@ -266,10 +270,24 @@ class Gui:
 		for i in self.temp_client_list:
 			self.layoutCam(i)
 		self.temp_client_list.clear()
+		
+		self.chat = ttk.Frame(self.root)
+
+		self.text_chat = tk.Text(self.chat, width = 57, font = ("Monospace", 9))
+		scrollbar = ttk.Scrollbar(self.chat, command = self.text_chat.yview, orient = "vertical")
+		self.text_chat.configure(yscrollcommand = scrollbar.set)
+
+		self.chat.columnconfigure(0, weight = 1)
+
+		scrollbar.grid(column = 1, row = 0, sticky="ns")
+		self.text_chat.configure(state='disabled')
+		self.text_chat.grid(column = 0, row = 0, sticky="nsew")
+
+		self.chat.grid(column = 2, row = 0, sticky = "se")
 
 		self.root.bind("<Configure>", self.resizeWindow)
 		# ttk.Label(self.root).grid(column = 0, row = 0, rowspan = 2, sticky="ewns")
-		# # ttk.Label(self.root, text = "cam zone", background = "red", foreground = "white").grid(column = 1, row = 0, sticky="ewns")
-		# ttk.Label(self.root).grid(column = 2, row = 0, sticky="ewns")
+		# ttk.Label(self.root, text = "cam zone", background = "red", foreground = "white").grid(column = 1, row = 0, sticky="ewns")
+		# ttk.Label(self.root, background = "red").grid(column = 2, row = 0, sticky="ewns")
 		# ttk.Label(self.root).grid(column = 1, row = 1, sticky="ewns")
 		# ttk.Label(self.root).grid(column = 2, row = 1, sticky="ewns")
