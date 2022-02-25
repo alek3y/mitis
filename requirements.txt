@@ -4,3 +4,4 @@ ttkthemes==3.2.2
 Pillow==9.0.1
 opencv-python==4.5.5.62
 imutils==0.5.4
+pygame==2.1.2
