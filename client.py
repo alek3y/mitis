@@ -1,11 +1,11 @@
 from connection import *
 from pyaudio import PyAudio, paContinue
-from audio import *
 from gui import Gui
+from audio import AudioPlayer, AudioHandler
 from threading import Thread, Semaphore
 from queue import Queue
 import cv2, imutils
-import numpy as np
+import pygame
 import sys
 import logging
 import time
@@ -22,9 +22,9 @@ logging.basicConfig(format="%(levelname)s: %(message)s", level=logging.DEBUG)
 client = Connection()
 webcam = cv2.VideoCapture(0)
 
-audio = PyAudio()
-audio_buffer = Queue()
-audio_last_frame = bytes(CHUNK*2)
+audio_incoming = {
+	# client_id: Queue()
+}
 
 # TODO: https://github.com/PyImageSearch/imutils/pull/237
 #streaming = True
@@ -91,6 +91,8 @@ def packets_hello(gui, recorder, receiver):
 				recorder.start()
 			else:
 				gui.addCam(client_id)
+				audio_incoming[client_id] = Queue()
+				AudioPlayer(audio_incoming[client_id]).start()
 				logging.debug(f"Client '{client_id}' joined the room")
 
 def packets_generic(gui, receiver):
@@ -112,60 +114,12 @@ def packets_video(gui, receiver):
 		(client_id, _), frame_bytes = receiver.next(Packet.Type.VIDEO)
 		gui.updateCam(client_id, frame_bytes)
 
-def audio_next(chunk, buffer):
-	global audio_last_frame
-
-	if buffer.qsize() > 0:
-		audio_last_frame = buffer.get()
-	return (audio_last_frame, paContinue)
-
-def packets_audio(player, receiver):
-	global audio_buffer
-
+def packets_audio(receiver):
 	while True:
-		pending = receiver.pending(Packet.Type.AUDIO)
+		(client_id, _), audio_bytes = receiver.next(Packet.Type.AUDIO)
 
-		if pending > 0:
-			pending_clients = {}
-			for i in range(pending):
-				(client_id, _), pending_data = receiver.next(Packet.Type.AUDIO)
-
-				if client_id not in pending_clients:
-					pending_clients[client_id] = pending_data
-				else:
-					audio_buffer.put(pending_clients[client_id])
-					pending_clients.pop(client_id)	# Droppa il vecchio chunk
-
-			if len(pending_clients) > 1:
-				weighted_sum = 0
-				weights_sum = 0
-				for client_id in pending_clients:
-					data = np.frombuffer(
-						pending_clients[client_id],
-						dtype=np.int16
-					)
-
-					# Normalizza i frame a [-1, 1)
-					normalized = data / (2**16/2)
-
-					# Usa la media come peso normalizzato a [0, 1)
-					weight = (np.mean(normalized) + 1) / 2
-
-					weighted_sum += normalized * weight
-					weights_sum += weight
-
-				weighted_average = np.clip(weighted_sum / weights_sum, -1, 1)
-				mixed = np.array(
-					weighted_average * (2**16/2),
-					dtype=np.int16
-				)
-			else:
-				for client_id in pending_clients:
-					mixed = pending_clients[client_id]
-
-			audio_buffer.put(mixed)
-		else:
-			time.sleep(1/RATE)
+		if client_id in audio_incoming:
+			audio_incoming[client_id].put(audio_bytes)
 
 def ask_join(room):
 	global join_request
@@ -178,10 +132,8 @@ if __name__ == "__main__":
 	receiver.start()
 
 	recorder = AudioHandler(
-		audio,
 		lambda b: send(Packet.Type.AUDIO, b)
 	)
-	player = AudioPlayer(audio, lambda chunk: audio_next(chunk, audio_buffer))
 
 	logging.debug("Building graphical user interface")
 	gui = Gui(ask_join)
@@ -217,7 +169,7 @@ if __name__ == "__main__":
 	).start()
 	Thread(
 		target=packets_audio,
-		args=(player, receiver),
+		args=(receiver,),
 		daemon=True
 	).start()
 
