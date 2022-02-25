@@ -68,6 +68,7 @@ class AudioHandler(Thread):
 
 class AudioPlayer(Thread):
     def __init__(self, buffer):
+        Thread.__init__(self, daemon=True)
         self.buffer = buffer
         self.running = True
 
@@ -77,7 +78,7 @@ class AudioPlayer(Thread):
             self.play(audio_bytes)
             time.sleep(1/RATE * CHUNK) #si assicura che non vengano riprodotti chunk uno sopra l'altro, trovando quanto tempo ci mette a riprodurre un chunk
 
-    def play(self):
+    def play(self, audio_bytes):
         sound = pygame.mixer.Sound(buffer=audio_bytes)
         sound.play()
     
