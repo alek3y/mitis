@@ -10,7 +10,7 @@ import sys
 import logging
 import time
 
-SERVER_ADDRESS = ("localhost", 4444)
+SERVER_ADDRESS = (socket.gethostbyname("dev.alek3y.com"), 4444)
 SERVER_REPLY_TIMEOUT = 5
 PACKET_TIMEOUT = 0.1
 HEARTBEAT_INTERVAL = 4
