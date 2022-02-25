@@ -8,7 +8,6 @@
 # #TODO fixare bottone che si preme solo in focus
 import tkinter as tk
 from tkinter import ttk
-from tkinter.scrolledtext import ScrolledText
 from PIL import ImageTk, Image
 from ttkthemes import ThemedTk
 import io
@@ -57,12 +56,9 @@ class Gui:
 		if event.widget == self.root:
 			self.actual_window_height = event.height
 			self.actual_window_width = event.width
-			self.textbox["width"] = int(1/50 * event.width)
+			self.textbox["width"] = int(1/51 * event.width)
 			self.text_chat["width"] = int(1/35 * event.width)
-			if(event.width < 1200):
-				self.textbox["font"] = ("Monospace", 9)
-			if (event.width > 1200):
-				self.textbox["font"] = FONT
+			self.text_chat["height"] = int(1/16 * event.height)
 
 	def micToggle(self, event, mute_button, mic_off, mic_on, input_source = "none"):
 		global mic_status
@@ -125,6 +121,7 @@ class Gui:
 			self.text_chat.configure(state='normal')
 			self.text_chat.insert("end", "\n" + text.get())
 			self.text_chat.configure(state='disabled')
+			self.text_chat.see("end")
 			self.textbox.delete(0, "end")
 
 	def addPlaceholder(self, event, text):
@@ -239,7 +236,7 @@ class Gui:
 
 		send_message_wrapper = ttk.Frame(self.root)	#frame che contiene la entry del messaggio e il bottone di invio
 		text = tk.StringVar()	#variabile dove andrà salvato il testo della entry
-		self.textbox = ttk.Entry(send_message_wrapper, textvariable = text, width = 40, font = FONT)
+		self.textbox = ttk.Entry(send_message_wrapper, textvariable = text, width = 41, font = ("Monospace", 10))
 		self.textbox.insert(0, PLACEHOLDER)	# inserire del testo che fungerà da placeholder
 		self.textbox.bind("<FocusIn>", lambda event:self.clearTextbox(event, text))
 		self.textbox.bind("<FocusOut>", lambda event:self.addPlaceholder(event, text))
@@ -273,14 +270,14 @@ class Gui:
 		
 		self.chat = ttk.Frame(self.root)
 
-		self.text_chat = tk.Text(self.chat, width = 57, font = ("Monospace", 9))
-		scrollbar = ttk.Scrollbar(self.chat, command = self.text_chat.yview, orient = "vertical")
-		self.text_chat.configure(yscrollcommand = scrollbar.set)
+		self.text_chat = tk.Text(self.chat, width = 52, font = ("Monospace", 9), highlightthickness = 0, borderwidth = 0, height = 57)
+		self.scrollbar = ttk.Scrollbar(self.chat, command = self.text_chat.yview, orient = "vertical")
+		self.text_chat.configure(yscrollcommand = self.scrollbar.set)
 
 		self.chat.columnconfigure(0, weight = 1)
 
-		scrollbar.grid(column = 1, row = 0, sticky="ns")
-		self.text_chat.configure(state='disabled')
+		self.scrollbar.grid(column = 1, row = 0, sticky="sn")
+		self.text_chat.configure(state = 'disabled')
 		self.text_chat.grid(column = 0, row = 0, sticky="nsew")
 
 		self.chat.grid(column = 2, row = 0, sticky = "se")
