@@ -48,6 +48,7 @@ class AudioHandler(Thread):
         self.chunk_buffer = []
         self.audio_bytes = b''
         self.sem = threading.Semaphore(0)
+        self.muted = False
 
     def run(self):
         self.stream = self.pyaudio.open(format=FORMAT,
@@ -58,12 +59,16 @@ class AudioHandler(Thread):
                         )
         while True:
             audio_bytes = self.record()
-            self.audio_bytes = audio_bytes
-            self.chunk_handler(audio_bytes)
-            self.chunk_buffer.append(audio_bytes)
+            if not self.muted:
+                self.audio_bytes = audio_bytes
+                self.chunk_handler(audio_bytes)
+                self.chunk_buffer.append(audio_bytes)
     
     def record(self):
         return self.stream.read(CHUNK, exception_on_overflow=False)
+
+    def mute(self):
+        self.muted = not self.muted
 
 
 class AudioPlayer(Thread):
