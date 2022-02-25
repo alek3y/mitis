@@ -109,7 +109,7 @@ def packets_generic(gui, receiver):
 				continue
 
 			if t == Packet.Type.CHAT:
-				logging.debug(f"Received message from '{client_id}': '{content}'")	# TODO: Da rimuovere
+				gui.receiveMessage(client_id, content)
 			elif t == Packet.Type.QUIT:
 				gui.removeCam(client_id)
 				player = audio_incoming[client_id][1]
@@ -141,11 +141,14 @@ if __name__ == "__main__":
 	receiver.start()
 
 	recorder = AudioHandler(
-		lambda b: send(Packet.Type.AUDIO, b)
+		lambda stream: send(Packet.Type.AUDIO, stream)
 	)
 
 	logging.debug("Building graphical user interface")
-	gui = Gui(ask_join)
+	gui = Gui(
+		ask_join,
+		lambda text: send(Packet.Type.CHAT, text)
+	)
 
 	logging.debug("Starting heartbeat periodic signal")
 	Thread(

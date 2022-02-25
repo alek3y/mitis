@@ -21,19 +21,20 @@ cam_status = False
 subtitles_status = False
 
 class Gui:
-	def __init__(self, roomJoiner):
+	def __init__(self, roomJoiner, messageHandler):
 		self.grid_size = 1	#numero di righe e di colonne delle cam (dato che è un quadrato: colonne = righe)
 		self.counter_size = 1
 		self.cams_container = None
 		self.temp_client_list = []	#lista che conterrà le webcam temporanee durante la crezione della root
 		self.cams = {}	#dizionario che conterrà le webcam dei client presenti
 		self.roomJoiner = roomJoiner
+		self.messageHandler = messageHandler
 		self.root = ThemedTk(theme = "breeze")	#finestra padre con tema breeze
 		self.root.title("Mitis")
 		self.width_screen = self.root.winfo_screenwidth()	# larghezza dello schermo
 		self.height_screen = self.root.winfo_screenheight() # altezza dello schermo
 		self.root.geometry(f"{self.width_screen}x{self.height_screen}")
-		self.root.minsize(700, 400)	#grandezza minima finestra
+		self.root.minsize(704, 396)	#grandezza minima finestra
 		self.actual_window_width = self.width_screen
 		self.actual_window_height = self.height_screen
 
@@ -56,9 +57,10 @@ class Gui:
 		if event.widget == self.root:
 			self.actual_window_height = event.height
 			self.actual_window_width = event.width
-			self.textbox["width"] = int(1/51 * event.width)
+			self.textbox["width"] = int(1/49 * event.width)
 			self.text_chat["width"] = int(1/35 * event.width)
 			self.text_chat["height"] = int(1/16 * event.height)
+			self.text_chat.see("end")
 
 	def micToggle(self, event, mute_button, mic_off, mic_on, input_source = "none"):
 		global mic_status
@@ -111,16 +113,19 @@ class Gui:
 		if (text.get() == PLACEHOLDER):
 			self.textbox.delete(0, "end")	#elimina tutto il contenuto
 
-	def receiveMessage(self, nome, message):
-		pass
+	def receiveMessage(self, name, message):
+		self.text_chat.configure(state = 'normal')
+		self.text_chat.insert("end", "<" + name + "> " + message + "\n")
+		self.text_chat.configure(state = 'disabled')
+		self.text_chat.see("end")
 
 	#invio del messaggio nella chat di testo
 	def sendMessage(self, event, text):
 		if (text.get() != PLACEHOLDER and text.get()):	#quando viene premuto il bottone invia impedisce in inviare il placeholder o una stringa vuota
-			#TODO invio del messaggio
-			self.text_chat.configure(state='normal')
-			self.text_chat.insert("end", "\n" + text.get())
-			self.text_chat.configure(state='disabled')
+			self.messageHandler(text.get())
+			self.text_chat.configure(state = 'normal')
+			self.text_chat.insert("end", "<Tu> " + text.get() + "\n")
+			self.text_chat.configure(state = 'disabled')
 			self.text_chat.see("end")
 			self.textbox.delete(0, "end")
 
@@ -154,7 +159,7 @@ class Gui:
 				new_frame = ImageTk.PhotoImage(image = new_image)
 				self.cams[client_id].config(image = new_frame)
 				self.cams[client_id].image = new_frame
-		except KeyError as e:
+		except RuntimeError as e:
 			# print(e, "client eliminato durante il refresh dell'immagine")
 			pass
 		except AttributeError as e:
@@ -225,18 +230,18 @@ class Gui:
 		mute_button.bind("<Control-m>", lambda event:self.micToggle(event, mute_button, mic_off, mic_on, "il microfono è stato mutato dalla shortcut"))	#shortcut: ctrl + m
 		mute_button.bind("<ButtonRelease>", lambda event:self.micToggle(event, mute_button, mic_off, mic_on, "il microfono è stato mutato dal mouse"))	#chiama la funzione anche con il click del mouse quando rilasciato
 		mute_button.focus()	#rende il bottone sotto focus di default (per far funzionare la shortcut il bottone deve essere in focus)
-		mute_button.pack(side = "right", padx = 5)
+		mute_button.pack(side = "right", padx = 5, pady = 1)
 
 		cam_button = ttk.Button(communication_tools, image = cam_off)
 		cam_button.bind("<Control-w>", lambda event:self.camToggle(event, cam_button, cam_off, cam_on, "la webcam è stata mutata dalla shortcut"))	#shortcut: ctrl + m
 		cam_button.bind("<ButtonRelease>", lambda event:self.camToggle(event, cam_button, cam_off, cam_on, "la webcam è stata mutata dal mouse"))	#chiama la funzione anche con il click del mouse quando rilasciato
-		cam_button.pack()
+		cam_button.pack(side = "right", pady = 1)
 
 		communication_tools.grid(column = 1, row = 1)
 
 		send_message_wrapper = ttk.Frame(self.root)	#frame che contiene la entry del messaggio e il bottone di invio
 		text = tk.StringVar()	#variabile dove andrà salvato il testo della entry
-		self.textbox = ttk.Entry(send_message_wrapper, textvariable = text, width = 41, font = ("Monospace", 10))
+		self.textbox = ttk.Entry(send_message_wrapper, textvariable = text, width = 39, font = ("Monospace", 10))
 		self.textbox.insert(0, PLACEHOLDER)	# inserire del testo che fungerà da placeholder
 		self.textbox.bind("<FocusIn>", lambda event:self.clearTextbox(event, text))
 		self.textbox.bind("<FocusOut>", lambda event:self.addPlaceholder(event, text))
@@ -246,7 +251,7 @@ class Gui:
 		send_button.bind("<ButtonRelease>", lambda event:self.sendMessage(event, text))
 		self.root.bind("<Return>", lambda event:self.sendMessage(event, text))
 		send_button.pack(padx = 5, pady = 1)
-		send_message_wrapper.grid(column = 2, row = 1, sticky = "ne")
+		send_message_wrapper.grid(column = 2, row = 1, sticky = "e")
 
 		tools = ttk.Frame(self.root)	#frame che contiene tutti i tools secondari
 
@@ -270,7 +275,7 @@ class Gui:
 		
 		self.chat = ttk.Frame(self.root)
 
-		self.text_chat = tk.Text(self.chat, width = 52, font = ("Monospace", 9), highlightthickness = 0, borderwidth = 0, height = 57)
+		self.text_chat = tk.Text(self.chat, width = 51, font = ("Monospace", 9), highlightthickness = 0, borderwidth = 0, height = 55)
 		self.scrollbar = ttk.Scrollbar(self.chat, command = self.text_chat.yview, orient = "vertical")
 		self.text_chat.configure(yscrollcommand = self.scrollbar.set)
 
@@ -278,7 +283,7 @@ class Gui:
 
 		self.scrollbar.grid(column = 1, row = 0, sticky="sn")
 		self.text_chat.configure(state = 'disabled')
-		self.text_chat.grid(column = 0, row = 0, sticky="nsew")
+		self.text_chat.grid(column = 0, row = 0, sticky="snew")
 
 		self.chat.grid(column = 2, row = 0, sticky = "se")
 
