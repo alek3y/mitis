@@ -17,10 +17,14 @@ HEARTBEAT_INTERVAL = 4
 
 WEBCAM_WIDTH = 400
 WEBCAM_QUALITY = 80
+VIDEO_MISSING = open("assets/video_missing.png", "rb").read()
 
 logging.basicConfig(format="%(levelname)s: %(message)s", level=logging.DEBUG)
 client = Connection()
+
 webcam = cv2.VideoCapture(0)
+webcam.set(cv2.CAP_PROP_FRAME_WIDTH, WEBCAM_WIDTH)
+webcam.set(cv2.CAP_PROP_FRAME_HEIGHT, WEBCAM_WIDTH*9/16)
 
 audio_incoming = {
 	# client_id: (audio_queue, player)
@@ -52,19 +56,26 @@ def streaming_video(gui, webcam):
 
 	join_response.acquire()
 	gui.addCam(None)
-	while True:
-		frame = imutils.resize(
-			webcam.read()[1],
-			width=WEBCAM_WIDTH
-		)
 
-		frame_bytes = cv2.imencode(
-			".jpg", frame,
-			(cv2.IMWRITE_JPEG_QUALITY, WEBCAM_QUALITY)
-		)[1].tobytes()
+	keep_streaming = True
+	while keep_streaming:
+		success, frame = webcam.read()
+
+		if not success:
+			frame_bytes = VIDEO_MISSING
+			keep_streaming = False
+		else:
+			frame = imutils.resize(frame, width=WEBCAM_WIDTH)
+			frame_bytes = cv2.imencode(
+				".jpg", frame,
+				(cv2.IMWRITE_JPEG_QUALITY, WEBCAM_QUALITY)
+			)[1].tobytes()
 
 		send(Packet.Type.VIDEO, frame_bytes)
 		gui.updateCam(None, frame_bytes)
+
+	logging.info("Webcam stream stopped")
+	webcam.release()
 
 def packets_hello(gui, recorder, receiver):
 	global join_request, join_response, join_timeout
@@ -92,6 +103,7 @@ def packets_hello(gui, recorder, receiver):
 				recorder.start()
 			else:
 				gui.addCam(client_id)
+				gui.updateCam(client_id, VIDEO_MISSING)
 				audio_queue = Queue()
 				player = AudioPlayer(audio_queue)
 				player.start()
