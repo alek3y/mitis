@@ -1,15 +1,20 @@
 import threading
 import pyaudio
 import speech_recognition as sr
+import pygame
+import time
 from threading import Thread, Semaphore
 from math import ceil #2.0 = 2 | 2.1 = 3
 
-TIME = 500 #millisecondi
 FORMAT = pyaudio.paInt16
 CHANNELS = 1 #numero di canali audio da usare
 RATE = 44100 #numero di frame al secondo
-CHUNK = 1024 #numero di frame per ogni buffer
+CHUNK = 512 #numero di frame per ogni buffer
 CAPTION_SAMPLES_AMOUNT = 4 #numero di sample per ogni caption (indichiamo con sample un elemento del buffer audio)
+MAX_CLIENTS = 50 #numero massimo di client che possono essere connessi
+
+pygame.mixer.init(frequency=RATE, channels=CHANNELS)
+pygame.mixer.set_num_channels(MAX_CLIENTS)
 
 class SpeechRecognition(Thread):
     def __init__(self, recorder):
@@ -35,9 +40,9 @@ class SpeechRecognition(Thread):
         return text
 
 class AudioHandler(Thread):
-    def __init__(self, pyaudio, chunk_handler):
+    def __init__(self, chunk_handler):
         Thread.__init__(self, daemon=True)
-        self.pyaudio = pyaudio
+        self.pyaudio = pyaudio.PyAudio()
         self.chunk_handler = chunk_handler
         self.recognizer = sr.Recognizer()
         self.chunk_buffer = []
@@ -56,20 +61,21 @@ class AudioHandler(Thread):
             self.audio_bytes = audio_bytes
             self.chunk_handler(audio_bytes)
             self.chunk_buffer.append(audio_bytes)
-            #self.sem.release()
     
     def record(self):
         return self.stream.read(CHUNK, exception_on_overflow=False)
 
-class AudioPlayer:
-    def __init__(self, pyaudio, audio_next):
-        self.stream = pyaudio.open(format=FORMAT,
-                        channels=CHANNELS,
-                        rate=RATE,
-                        output=True,
-                        frames_per_buffer=CHUNK,
-                        stream_callback=lambda _, chunk, time, status: audio_next(chunk)
-                        )
 
-    def play(self, audio_bytes):
-        self.stream.write(audio_bytes)
+class AudioPlayer(Thread):
+    def __init__(self, buffer):
+        self.buffer = buffer
+
+    def run(self):
+        while True:
+            audio_bytes = self.buffer.get()
+            self.play(audio_bytes)
+            time.sleep(1/RATE * CHUNK) #si assicura che non vengano riprodotti chunk uno sopra l'altro, trovando quanto tempo ci mette a riprodurre un chunk
+
+    def play(self):
+        sound = pygame.mixer.Sound(buffer=audio_bytes)
+        sound.play()
