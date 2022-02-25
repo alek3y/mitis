@@ -56,20 +56,18 @@ def streaming_video(gui, webcam):
 
 	join_response.acquire()
 	gui.addCam(None)
+	gui.updateCam(None, VIDEO_MISSING)
 
-	keep_streaming = True
-	while keep_streaming:
+	while True:
 		success, frame = webcam.read()
-
 		if not success:
-			frame_bytes = VIDEO_MISSING
-			keep_streaming = False
-		else:
-			frame = imutils.resize(frame, width=WEBCAM_WIDTH)
-			frame_bytes = cv2.imencode(
-				".jpg", frame,
-				(cv2.IMWRITE_JPEG_QUALITY, WEBCAM_QUALITY)
-			)[1].tobytes()
+			break
+
+		frame = imutils.resize(frame, width=WEBCAM_WIDTH)
+		frame_bytes = cv2.imencode(
+			".jpg", frame,
+			(cv2.IMWRITE_JPEG_QUALITY, WEBCAM_QUALITY)
+		)[1].tobytes()
 
 		send(Packet.Type.VIDEO, frame_bytes)
 		gui.updateCam(None, frame_bytes)
