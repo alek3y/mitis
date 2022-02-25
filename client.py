@@ -23,7 +23,7 @@ client = Connection()
 webcam = cv2.VideoCapture(0)
 
 audio_incoming = {
-	# client_id: Queue()
+	# client_id: (audio_queue, player)
 }
 
 # TODO: https://github.com/PyImageSearch/imutils/pull/237
@@ -68,6 +68,7 @@ def streaming_video(gui, webcam):
 
 def packets_hello(gui, recorder, receiver):
 	global join_request, join_response, join_timeout
+	global audio_queue
 
 	while True:
 		join_request.acquire()
@@ -91,11 +92,15 @@ def packets_hello(gui, recorder, receiver):
 				recorder.start()
 			else:
 				gui.addCam(client_id)
-				audio_incoming[client_id] = Queue()
-				AudioPlayer(audio_incoming[client_id]).start()
+				audio_queue = Queue()
+				player = AudioPlayer(audio_queue)
+				player.start()
+				audio_incoming[client_id] = (audio_queue, player)
 				logging.debug(f"Client '{client_id}' joined the room")
 
 def packets_generic(gui, receiver):
+	global audio_queue
+
 	while True:
 		for t in (Packet.Type.CHAT, Packet.Type.QUIT):
 			try:
@@ -107,6 +112,10 @@ def packets_generic(gui, receiver):
 				logging.debug(f"Received message from '{client_id}': '{content}'")	# TODO: Da rimuovere
 			elif t == Packet.Type.QUIT:
 				gui.removeCam(client_id)
+				player = audio_incoming[client_id][1]
+				player.stop()
+				player.join()
+				audio_incoming.pop(client_id)
 				logging.debug(f"Client '{client_id}' left the room")
 
 def packets_video(gui, receiver):
@@ -119,7 +128,7 @@ def packets_audio(receiver):
 		(client_id, _), audio_bytes = receiver.next(Packet.Type.AUDIO)
 
 		if client_id in audio_incoming:
-			audio_incoming[client_id].put(audio_bytes)
+			audio_incoming[client_id][0].put(audio_bytes)
 
 def ask_join(room):
 	global join_request
