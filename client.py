@@ -157,7 +157,8 @@ if __name__ == "__main__":
 	logging.debug("Building graphical user interface")
 	gui = Gui(
 		ask_join,
-		lambda text: send(Packet.Type.CHAT, text)
+		lambda text: send(Packet.Type.CHAT, text),
+		recorder.mute
 	)
 
 	logging.debug("Starting heartbeat periodic signal")

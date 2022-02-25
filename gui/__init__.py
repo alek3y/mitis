@@ -16,12 +16,12 @@ import math
 
 FONT = ("Monospace", 11)
 PLACEHOLDER = "Inserisci un messaggio... "
-mic_status = False
-cam_status = False
+mic_status = True
+cam_status = True
 subtitles_status = False
 
 class Gui:
-	def __init__(self, roomJoiner, messageHandler):
+	def __init__(self, roomJoiner, messageHandler, muteHandler):
 		self.grid_size = 1	#numero di righe e di colonne delle cam (dato che è un quadrato: colonne = righe)
 		self.counter_size = 1
 		self.cams_container = None
@@ -29,6 +29,7 @@ class Gui:
 		self.cams = {}	#dizionario che conterrà le webcam dei client presenti
 		self.roomJoiner = roomJoiner
 		self.messageHandler = messageHandler
+		self.muteHandler = muteHandler
 		self.root = ThemedTk(theme = "breeze")	#finestra padre con tema breeze
 		self.root.title("Mitis")
 		self.width_screen = self.root.winfo_screenwidth()	# larghezza dello schermo
@@ -45,10 +46,11 @@ class Gui:
 		self.input_entry= ttk.Entry(self.dialog, textvariable = room_code, font = FONT)
 		self.input_entry.focus()
 		self.input_entry.pack()
-		self.submit = ttk.Button(self.dialog, text = "JOIN")
-		self.submit.pack(pady = 5)
+		self.key = tk.PhotoImage(file = "assets/key.png")
+		self.submit = ttk.Button(self.dialog, image = self.key)
 		self.root.bind("<Return>", lambda event:self.getJoinCode(event, room_code))
 		self.submit.bind("<ButtonRelease>", lambda event:self.getJoinCode(event, room_code))
+		self.submit.pack(pady = 5)
 		self.error = ttk.Label(self.dialog, text = "", foreground = "red", font = FONT)
 		self.error.pack()
 		self.dialog.pack(expand = True)
@@ -62,37 +64,33 @@ class Gui:
 			self.text_chat["height"] = int(1/16 * event.height)
 			self.text_chat.see("end")
 
-	def micToggle(self, event, mute_button, mic_off, mic_on, input_source = "none"):
+	def micToggle(self, event, mute_button, mic_off, mic_on):
 		global mic_status
-		if(str(mute_button["state"]) != "disabled"):
-			message = ttk.Label(self.root, font = FONT)
-			print(input_source)	#debug
-			print(event)	#debug
-			if(mic_status):	#se il microfono è attivo
-				mute_button.config(image = mic_off)	#cambia l'immagine
-				mic_status = False	#setta il microfono come disattivo
-				message.config(text = "listening no ")
-			else:
-				mute_button.config(image = mic_on)
-				mic_status = True
-				message.config(text = "listening yes")
-			message.grid(column = 1, row = 1, sticky = "s")
+		message = ttk.Label(self.root, font = FONT)
+		if(mic_status):	#se il microfono è attivo
+			mute_button.config(image = mic_off)	#cambia l'immagine
+			mic_status = False	#setta il microfono come disattivo
+			message.config(text = "listening no ")
+		else:
+			mute_button.config(image = mic_on)
+			mic_status = True
+			message.config(text = "listening yes")
+		message.grid(column = 1, row = 1, sticky = "s")
+		self.muteHandler()
 
-	def camToggle(self, event, cam_button, cam_off, cam_on, input_source = "none"):
+
+	def camToggle(self, event, cam_button, cam_off, cam_on):
 		global cam_status
-		if(str(cam_button["state"]) != "disabled"):
-			message = ttk.Label(self.root, font=FONT)
-			print(input_source)	#debug
-			print(event)	#debug
-			if(cam_status):	#se la cam è attiva
-				cam_button.config(image = cam_off)	#cambia l'immagine
-				cam_status = False	#imposta la cam come disattivata
-				message.config(text = "watching no ")
-			else:
-				cam_button.config(image = cam_on)
-				cam_status = True
-				message.config(text = "watching yes")
-			message.grid(column = 1, row = 1, sticky = "sw")
+		message = ttk.Label(self.root, font=FONT)
+		if(cam_status):	#se la cam è attiva
+			cam_button.config(image = cam_off)	#cambia l'immagine
+			cam_status = False	#imposta la cam come disattivata
+			message.config(text = "watching no ")
+		else:
+			cam_button.config(image = cam_on)
+			cam_status = True
+			message.config(text = "watching yes")
+		message.grid(column = 1, row = 1, sticky = "sw")
 
 	def subtitlesToggle(self, event, subtitles_button, subtitles_off, subtitles_on):
 		global subtitles_status
@@ -223,16 +221,17 @@ class Gui:
 		self.mask = tk.PhotoImage(file = "assets/mask.png")
 		subtitles_off = tk.PhotoImage(file = "assets/subtitles_off.png")
 		subtitles_on = tk.PhotoImage(file = "assets/subtitles.png")
+		
 
 		communication_tools = ttk.Frame(self.root)	#frame che contiene i bottoni per il mute e lo spegnimento della cam
 
-		mute_button = ttk.Button(communication_tools, image = mic_off)
-		mute_button.bind("<Control-m>", lambda event:self.micToggle(event, mute_button, mic_off, mic_on, "il microfono è stato mutato dalla shortcut"))	#shortcut: ctrl + m
-		mute_button.bind("<ButtonRelease>", lambda event:self.micToggle(event, mute_button, mic_off, mic_on, "il microfono è stato mutato dal mouse"))	#chiama la funzione anche con il click del mouse quando rilasciato
+		mute_button = ttk.Button(communication_tools, image = mic_on)
+		mute_button.bind("<Control-m>", lambda event:self.micToggle(event, mute_button, mic_off, mic_on))	#shortcut: ctrl + m
+		mute_button.bind("<ButtonRelease>", lambda event:self.micToggle(event, mute_button, mic_off, mic_on))	#chiama la funzione anche con il click del mouse quando rilasciato
 		mute_button.focus()	#rende il bottone sotto focus di default (per far funzionare la shortcut il bottone deve essere in focus)
 		mute_button.pack(side = "right", padx = 5, pady = 1)
 
-		cam_button = ttk.Button(communication_tools, image = cam_off)
+		cam_button = ttk.Button(communication_tools, image = cam_on)
 		cam_button.bind("<Control-w>", lambda event:self.camToggle(event, cam_button, cam_off, cam_on, "la webcam è stata mutata dalla shortcut"))	#shortcut: ctrl + m
 		cam_button.bind("<ButtonRelease>", lambda event:self.camToggle(event, cam_button, cam_off, cam_on, "la webcam è stata mutata dal mouse"))	#chiama la funzione anche con il click del mouse quando rilasciato
 		cam_button.pack(side = "right", pady = 1)
