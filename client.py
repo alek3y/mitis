@@ -126,7 +126,7 @@ def packets_generic(gui, receiver):
 				gui.removeCam(client_id)
 				player = audio_incoming[client_id][1]
 				player.stop()
-				player.join()
+				#player.join()	# TODO: Sull'AudioPlayer il while si blocca su queue.get()
 				audio_incoming.pop(client_id)
 				logging.debug(f"Client '{client_id}' left the room")
 
