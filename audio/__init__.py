@@ -17,8 +17,9 @@ pygame.mixer.init(frequency=RATE, channels=CHANNELS)
 pygame.mixer.set_num_channels(MAX_CLIENTS)
 
 class SpeechRecognition(Thread):
-    def __init__(self, recorder):
+    def __init__(self, recorder, caption_handler):
         Thread.__init__(self, daemon=True)
+        self.caption_handler = caption_handler
         self.recognizer = sr.Recognizer()
         self.recorder = recorder
         
@@ -28,6 +29,7 @@ class SpeechRecognition(Thread):
                 self.recorder.sem.acquire()
             caption_audio_bytes = b''.join(self.recorder.chunk_buffer) #4 chunk joinati
             text = self.caption(caption_audio_bytes)
+            self.caption_handler(text)
             print("client said: " + str(text))
             self.recorder.chunk_buffer.clear()
 
