@@ -21,7 +21,7 @@ cam_status = True
 subtitles_status = False
 
 class Gui:
-	def __init__(self, roomJoiner, messageHandler, muteHandler):
+	def __init__(self, roomJoiner, messageHandler, muteHandler, camHandler):
 		self.grid_size = 1	#numero di righe e di colonne delle cam (dato che è un quadrato: colonne = righe)
 		self.counter_size = 1
 		self.cams_container = None
@@ -30,6 +30,7 @@ class Gui:
 		self.roomJoiner = roomJoiner
 		self.messageHandler = messageHandler
 		self.muteHandler = muteHandler
+		self.camHandler = camHandler
 		self.root = ThemedTk(theme = "breeze")	#finestra padre con tema breeze
 		self.root.title("Mitis")
 		self.width_screen = self.root.winfo_screenwidth()	# larghezza dello schermo
@@ -61,7 +62,7 @@ class Gui:
 			self.actual_window_width = event.width
 			self.textbox["width"] = int(1/49 * event.width)
 			self.text_chat["width"] = int(1/35 * event.width)
-			self.text_chat["height"] = int(1/16 * event.height)
+			self.text_chat["height"] = int(2/35 * event.height)
 			self.text_chat.see("end")
 
 	def micToggle(self, event, mute_button, mic_off, mic_on):
@@ -91,6 +92,7 @@ class Gui:
 			cam_status = True
 			message.config(text = "watching yes")
 		message.grid(column = 1, row = 1, sticky = "sw")
+		self.camHandler()
 
 	def subtitlesToggle(self, event, subtitles_button, subtitles_off, subtitles_on):
 		global subtitles_status
@@ -146,17 +148,29 @@ class Gui:
 		self.submit["state"] = "enabled"
 		self.input_entry["state"] = "enabled"
 
+	# def computeSize(self):
+	# 	self.cam_size = (int(math.ceil(16 * (40 - math.log(self.grid_size**2) * 6 - (self.width_screen / (self.actual_window_width/6))))),
+	# 					int(math.ceil(9 * (40 - math.log(self.grid_size**2) * 6 - (self.height_screen / (self.actual_window_height/6))))))	#decide la grandezza delle webcam
+		
+	# 	temp_cams = list(self.cams.keys())
+	# 	for cam in temp_cams:
+	# 		hello = ImageTk.getimage(self.cams[cam].image)
+	# 		hello = hello.resize(self.cam_size)
+	# 		self.cams[cam].config(image = hello)
+	# 		self.cams[cam].image = hello
+
 	#aggiorna l'immagine di una webcam
 	def updateCam(self, client_id, new_image_frame):
+		self.cam_size = (int(math.ceil(16 * (40 - math.log(self.grid_size**2) * 6 - (self.width_screen / (self.actual_window_width/6))))),
+						int(math.ceil(9 * (40 - math.log(self.grid_size**2) * 6 - (self.height_screen / (self.actual_window_height/6))))))	#decide la grandezza delle webcam
 		try:
-			self.cam_size = (int(math.ceil(16 * (40 - math.log(self.grid_size**2) * 6 - (self.width_screen / (self.actual_window_width/6))))),
-							int(math.ceil(9 * (40 - math.log(self.grid_size**2) * 6 - (self.height_screen / (self.actual_window_height/6))))))	#decide la grandezza delle webcam
 			if(client_id in self.cams):
 				new_image = Image.open(io.BytesIO(new_image_frame))
 				new_image = new_image.resize(self.cam_size)
 				new_frame = ImageTk.PhotoImage(image = new_image)
 				self.cams[client_id].config(image = new_frame)
 				self.cams[client_id].image = new_frame
+				self.computeSize()
 		except RuntimeError as e:
 			# print(e, "client eliminato durante il refresh dell'immagine")
 			pass
@@ -232,8 +246,8 @@ class Gui:
 		mute_button.pack(side = "right", padx = 5, pady = 1)
 
 		cam_button = ttk.Button(communication_tools, image = cam_on)
-		cam_button.bind("<Control-w>", lambda event:self.camToggle(event, cam_button, cam_off, cam_on, "la webcam è stata mutata dalla shortcut"))	#shortcut: ctrl + m
-		cam_button.bind("<ButtonRelease>", lambda event:self.camToggle(event, cam_button, cam_off, cam_on, "la webcam è stata mutata dal mouse"))	#chiama la funzione anche con il click del mouse quando rilasciato
+		cam_button.bind("<Control-w>", lambda event:self.camToggle(event, cam_button, cam_off, cam_on))	#shortcut: ctrl + m
+		cam_button.bind("<ButtonRelease>", lambda event:self.camToggle(event, cam_button, cam_off, cam_on))	#chiama la funzione anche con il click del mouse quando rilasciato
 		cam_button.pack(side = "right", pady = 1)
 
 		communication_tools.grid(column = 1, row = 1)
@@ -274,7 +288,7 @@ class Gui:
 		
 		self.chat = ttk.Frame(self.root)
 
-		self.text_chat = tk.Text(self.chat, width = 51, font = ("Monospace", 9), highlightthickness = 0, borderwidth = 0, height = 55)
+		self.text_chat = tk.Text(self.chat, width = 51, font = ("Monospace", 9), highlightthickness = 0, borderwidth = 0, height = 1/18 * self.height_screen)
 		self.scrollbar = ttk.Scrollbar(self.chat, command = self.text_chat.yview, orient = "vertical")
 		self.text_chat.configure(yscrollcommand = self.scrollbar.set)
 
