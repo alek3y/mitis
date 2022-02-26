@@ -22,7 +22,7 @@ class Mask:
     def __init__(self, faces_cascade):
         self.faces_cascade = cv2.CascadeClassifier(faces_cascade)
        
-    def face_mask(self, frame, overlay_image = "./masks/pusheen.png"):
+    def face_mask(self, frame, overlay_image = "./masks/fren.png"):
         overlay_image = cv2.imread(overlay_image, cv2.IMREAD_UNCHANGED)
         gray_scale = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         faces = self.faces_cascade.detectMultiScale(gray_scale, 1.1, 4)
@@ -39,4 +39,3 @@ class Mask:
             overlay_resize = cv2.resize(overlay_image, (w, h))
             frame = cvzone.overlayPNG(frame, overlay_resize, [x,y-5])
         return frame
-        
