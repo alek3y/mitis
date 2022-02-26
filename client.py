@@ -19,6 +19,8 @@ WEBCAM_QUALITY = 80
 VIDEO_MISSING = open("assets/video_missing.png", "rb").read()
 
 logging.basicConfig(format="%(levelname)s: %(message)s", level=logging.DEBUG)
+logging.getLogger("PIL").setLevel(logging.WARNING)
+
 client = Connection()
 
 webcam = cv2.VideoCapture(0)
