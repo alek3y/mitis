@@ -68,47 +68,41 @@ class Gui:
 
 	def micToggle(self, event, mute_button, mic_off, mic_on):
 		global mic_status
-		message = ttk.Label(self.root, font = FONT)
 		if(mic_status):	#se il microfono è attivo
 			mute_button.config(image = mic_off)	#cambia l'immagine
 			mic_status = False	#setta il microfono come disattivo
-			message.config(text = "listening no ")
 		else:
 			mute_button.config(image = mic_on)
 			mic_status = True
-			message.config(text = "listening yes")
-		message.grid(column = 1, row = 1, sticky = "s")
 		self.muteHandler()
 
 
 	def camToggle(self, event, cam_button, cam_off, cam_on):
 		global cam_status
-		message = ttk.Label(self.root, font=FONT)
 		if(cam_status):	#se la cam è attiva
 			cam_button.config(image = cam_off)	#cambia l'immagine
 			cam_status = False	#imposta la cam come disattivata
-			message.config(text = "watching no ")
 		else:
 			cam_button.config(image = cam_on)
 			cam_status = True
-			message.config(text = "watching yes")
-		message.grid(column = 1, row = 1, sticky = "sw")
 		self.camHandler()
 
 	def subtitlesToggle(self, event, subtitles_button, subtitles_off, subtitles_on):
 		global subtitles_status
 		if(str(subtitles_button["state"]) != "disabled"):
-			message = ttk.Label(self.root, font = FONT)
-			print(event)	#debug
 			if(subtitles_status):
 				subtitles_button.config(image = subtitles_off)
 				subtitles_status = False
-				message.config(text = "subtitles no ")
 			else:
 				subtitles_button.config(image = subtitles_on)
 				subtitles_status = True
-				message.config(text = "subtitles yes")
-			message.grid(column = 0, row = 0, sticky = "se")
+
+	def placeSubtitle(self, line):
+		global subtitles_status
+		if subtitles_status:
+			if(len(line) + len(self.subtitle["text"]) > 45):
+				self.subtitle["text"] = line
+			else: self.subtitle["text"] += line
 
 	def clearTextbox(self, event, text):
 		if (text.get() == PLACEHOLDER):
@@ -239,22 +233,26 @@ class Gui:
 		self.mask = tk.PhotoImage(file = "assets/mask.png")
 		subtitles_off = tk.PhotoImage(file = "assets/subtitles_off.png")
 		subtitles_on = tk.PhotoImage(file = "assets/subtitles.png")
-		
 
+
+		subtitles_container = ttk.Frame(self.root)
+		self.subtitle = ttk.Label(subtitles_container, text = "", font = FONT)
+		self.subtitle.pack()
+		subtitles_container.grid(column = 1, row = 0, sticky = "s")
 		communication_tools = ttk.Frame(self.root)	#frame che contiene i bottoni per il mute e lo spegnimento della cam
 
 		mute_button = ttk.Button(communication_tools, image = mic_on)
 		mute_button.bind("<Control-m>", lambda event:self.micToggle(event, mute_button, mic_off, mic_on))	#shortcut: ctrl + m
 		mute_button.bind("<ButtonRelease>", lambda event:self.micToggle(event, mute_button, mic_off, mic_on))	#chiama la funzione anche con il click del mouse quando rilasciato
 		mute_button.focus()	#rende il bottone sotto focus di default (per far funzionare la shortcut il bottone deve essere in focus)
-		mute_button.pack(side = "right", padx = 5, pady = 1)
+		mute_button.pack(side = "right", padx = 5)
 
 		cam_button = ttk.Button(communication_tools, image = cam_on)
 		cam_button.bind("<Control-w>", lambda event:self.camToggle(event, cam_button, cam_off, cam_on))	#shortcut: ctrl + m
 		cam_button.bind("<ButtonRelease>", lambda event:self.camToggle(event, cam_button, cam_off, cam_on))	#chiama la funzione anche con il click del mouse quando rilasciato
-		cam_button.pack(side = "right", pady = 1)
+		cam_button.pack(side = "right")
 
-		communication_tools.grid(column = 1, row = 1)
+		communication_tools.grid(column = 1, row = 1, sticky = "s", pady = 2)
 
 		send_message_wrapper = ttk.Frame(self.root)	#frame che contiene la entry del messaggio e il bottone di invio
 		text = tk.StringVar()	#variabile dove andrà salvato il testo della entry
@@ -309,8 +307,3 @@ class Gui:
 		self.chat.grid(column = 2, row = 0, sticky = "ne")
 
 		self.root.bind("<Configure>", self.resizeWindow)
-		# ttk.Label(self.root).grid(column = 0, row = 0, rowspan = 2, sticky="ewns")
-		# ttk.Label(self.root, text = "cam zone", background = "red", foreground = "white").grid(column = 1, row = 0, sticky="ewns")
-		# ttk.Label(self.root, background = "red").grid(column = 2, row = 0, sticky="ewns")
-		# ttk.Label(self.root).grid(column = 1, row = 1, sticky="ewns")
-		# ttk.Label(self.root).grid(column = 2, row = 1, sticky="ewns")
