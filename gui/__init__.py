@@ -62,7 +62,7 @@ class Gui:
 			self.actual_window_width = event.width
 			self.textbox["width"] = int(1/49 * event.width)
 			self.text_chat["width"] = int(1/35 * event.width)
-			self.text_chat["height"] = int(2/35 * event.height)
+			self.text_chat["height"] = int(2/37 * event.height)
 			self.text_chat.see("end")
 
 	def micToggle(self, event, mute_button, mic_off, mic_on):
@@ -161,10 +161,10 @@ class Gui:
 
 	#aggiorna l'immagine di una webcam
 	def updateCam(self, client_id, new_image_frame):
-		self.cam_size = (int(math.ceil(16 * (40 - math.log(self.grid_size**2) * 6 - (self.width_screen / (self.actual_window_width/6))))),
-						int(math.ceil(9 * (40 - math.log(self.grid_size**2) * 6 - (self.height_screen / (self.actual_window_height/6))))))	#decide la grandezza delle webcam
 		try:
 			if(client_id in self.cams):
+				self.cam_size = (int(math.ceil(16 * (40 - math.log(self.grid_size**2) * 6 - (self.width_screen / (self.actual_window_width/6))))),
+								int(math.ceil(9 * (40 - math.log(self.grid_size**2) * 6 - (self.height_screen / (self.actual_window_height/6))))))	#decide la grandezza delle webcam
 				new_image = Image.open(io.BytesIO(new_image_frame))
 				new_image = new_image.resize(self.cam_size)
 				new_frame = ImageTk.PhotoImage(image = new_image)
@@ -287,8 +287,12 @@ class Gui:
 		self.temp_client_list.clear()
 		
 		self.chat = ttk.Frame(self.root)
-
-		self.text_chat = tk.Text(self.chat, width = 51, font = ("Monospace", 9), highlightthickness = 0, borderwidth = 0, height = 1/18 * self.height_screen)
+		self.text_chat = tk.Text(self.chat,
+								width = 51,
+								font = ("Monospace", 9),
+								highlightthickness = 0,
+								borderwidth = 0,
+								height = 2/37 * (self.actual_window_height - (7.5 * self.actual_window_height / 100)))
 		self.scrollbar = ttk.Scrollbar(self.chat, command = self.text_chat.yview, orient = "vertical")
 		self.text_chat.configure(yscrollcommand = self.scrollbar.set)
 
@@ -298,7 +302,7 @@ class Gui:
 		self.text_chat.configure(state = 'disabled')
 		self.text_chat.grid(column = 0, row = 0, sticky="snew")
 
-		self.chat.grid(column = 2, row = 0, sticky = "se")
+		self.chat.grid(column = 2, row = 0, sticky = "ne")
 
 		self.root.bind("<Configure>", self.resizeWindow)
 		# ttk.Label(self.root).grid(column = 0, row = 0, rowspan = 2, sticky="ewns")
