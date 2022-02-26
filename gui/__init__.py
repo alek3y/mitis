@@ -93,6 +93,7 @@ class Gui:
 			if(subtitles_status):
 				subtitles_button.config(image = subtitles_off)
 				subtitles_status = False
+				self.subtitle["text"] = ""
 			else:
 				subtitles_button.config(image = subtitles_on)
 				subtitles_status = True
@@ -102,7 +103,7 @@ class Gui:
 		if subtitles_status:
 			if(len(line) + len(self.subtitle["text"]) > 45):
 				self.subtitle["text"] = line
-			else: self.subtitle["text"] += line
+			else: self.subtitle["text"] += " " + line
 
 	def clearTextbox(self, event, text):
 		if (text.get() == PLACEHOLDER):
