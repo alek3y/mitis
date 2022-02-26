@@ -10,7 +10,7 @@ FORMAT = pyaudio.paInt16
 CHANNELS = 1 #numero di canali audio da usare
 RATE = 44100 #numero di frame al secondo
 CHUNK = 512 #numero di frame per ogni buffer
-CAPTION_SAMPLES_AMOUNT = 4 #numero di sample per ogni caption (indichiamo con sample un elemento del buffer audio)
+CAPTION_SAMPLES_AMOUNT = 200 #numero di sample per ogni caption (indichiamo con sample un elemento del buffer audio)
 MAX_CLIENTS = 50 #numero massimo di client che possono essere connessi
 
 pygame.mixer.init(frequency=RATE, channels=CHANNELS)
@@ -63,6 +63,7 @@ class AudioHandler(Thread):
                 self.audio_bytes = audio_bytes
                 self.chunk_handler(audio_bytes)
                 self.chunk_buffer.append(audio_bytes)
+                self.sem.release()
     
     def record(self):
         return self.stream.read(CHUNK, exception_on_overflow=False)
@@ -90,4 +91,3 @@ class AudioPlayer(Thread):
     def stop(self):
         self.running = False
     
-
