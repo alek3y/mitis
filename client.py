@@ -1,6 +1,6 @@
 from connection import *
 from gui import Gui
-from audio import AudioPlayer, AudioHandler
+from audio import AudioPlayer, AudioHandler, SpeechRecognition
 from threading import Thread, Semaphore
 from queue import Queue
 import cv2, imutils
@@ -124,7 +124,7 @@ def packets_generic(gui, receiver):
 	global audio_queue
 
 	while True:
-		for t in (Packet.Type.CHAT, Packet.Type.QUIT):
+		for t in (Packet.Type.CHAT, Packet.Type.QUIT, Packet.Type.CAPTIONS):
 			try:
 				(client_id, _), content = receiver.next(t, timeout=PACKET_TIMEOUT)
 			except Receiver.TimeoutError:
@@ -136,9 +136,11 @@ def packets_generic(gui, receiver):
 				gui.removeCam(client_id)
 				player = audio_incoming[client_id][1]
 				player.stop()
-				#player.join()	# TODO: Sull'AudioPlayer il while si blocca su queue.get()
 				audio_incoming.pop(client_id)
 				logging.debug(f"Client '{client_id}' left the room")
+			elif t == Packet.Type.CAPTIONS:
+				# TODO: Mostrare i sottotitoli nella GUI
+				pass
 
 def packets_video(gui, receiver):
 	while True:
@@ -190,6 +192,12 @@ if __name__ == "__main__":
 		target=streaming_video,
 		args=(gui, webcam),
 		daemon=True
+	).start()
+
+	logging.debug("Starting captions engine")
+	SpeechRecognition(
+		recorder,
+		lambda caption: send(Packet.Type.CAPTIONS, caption)
 	).start()
 
 	logging.debug("Starting packets handler threads")

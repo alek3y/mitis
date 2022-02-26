@@ -133,9 +133,8 @@ def packet_handler(source_client, packet):
 			packet_quit(source_client_id, room_id)
 
 		elif packet.type in (
-			Packet.Type.VIDEO,
-			Packet.Type.AUDIO,
-			Packet.Type.CHAT
+			Packet.Type.VIDEO, Packet.Type.AUDIO,
+			Packet.Type.CHAT, Packet.Type.CAPTIONS
 		):
 			packet_forward(source_client_id, room_id, packet)
 
