@@ -139,8 +139,7 @@ def packets_generic(gui, receiver):
 				audio_incoming.pop(client_id)
 				logging.debug(f"Client '{client_id}' left the room")
 			elif t == Packet.Type.CAPTIONS:
-				# TODO: Mostrare i sottotitoli nella GUI
-				pass
+				gui.placeSubtitle(content)
 
 def packets_video(gui, receiver):
 	while True:

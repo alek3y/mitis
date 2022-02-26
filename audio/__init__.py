@@ -30,7 +30,6 @@ class SpeechRecognition(Thread):
             caption_audio_bytes = b''.join(self.recorder.chunk_buffer) #4 chunk joinati
             text = self.caption(caption_audio_bytes)
             self.caption_handler(text)
-            print("client said: " + str(text))
             self.recorder.chunk_buffer.clear()
 
     def caption(self, audio):
@@ -92,4 +91,3 @@ class AudioPlayer(Thread):
     
     def stop(self):
         self.running = False
-    
