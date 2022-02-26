@@ -1,5 +1,4 @@
 from connection import *
-from pyaudio import PyAudio, paContinue
 from gui import Gui
 from audio import AudioPlayer, AudioHandler
 from threading import Thread, Semaphore
