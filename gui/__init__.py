@@ -64,6 +64,7 @@ class Gui:
 			self.text_chat["width"] = int(1/35 * event.width)
 			self.text_chat["height"] = int(2/37 * event.height)
 			self.text_chat.see("end")
+			self.computeSize()
 
 	def micToggle(self, event, mute_button, mic_off, mic_on):
 		global mic_status
@@ -148,35 +149,38 @@ class Gui:
 		self.submit["state"] = "enabled"
 		self.input_entry["state"] = "enabled"
 
-	# def computeSize(self):
-	# 	self.cam_size = (int(math.ceil(16 * (40 - math.log(self.grid_size**2) * 6 - (self.width_screen / (self.actual_window_width/6))))),
-	# 					int(math.ceil(9 * (40 - math.log(self.grid_size**2) * 6 - (self.height_screen / (self.actual_window_height/6))))))	#decide la grandezza delle webcam
-		
-	# 	temp_cams = list(self.cams.keys())
-	# 	for cam in temp_cams:
-	# 		hello = ImageTk.getimage(self.cams[cam].image)
-	# 		hello = hello.resize(self.cam_size)
-	# 		self.cams[cam].config(image = hello)
-	# 		self.cams[cam].image = hello
-
-	#aggiorna l'immagine di una webcam
-	def updateCam(self, client_id, new_image_frame):
-		try:
+	def computeSize(self, client_id = "", new_image_frame = None):
+		self.cam_size = (int(math.ceil(16 * (40 - math.log(self.grid_size**2) * 8 - (self.width_screen / (self.actual_window_width/7))))),
+	 					int(math.ceil(9 * (40 - math.log(self.grid_size**2) * 6 - (self.height_screen / (self.actual_window_height/6))))))	#decide la grandezza delle webcam
+		temp_cams = list(self.cams.keys())
+		if not client_id and new_image_frame is None:
+			for cam in temp_cams:
+				if(cam in self.cams):
+					new_image = ImageTk.getimage(self.cams[cam].image)
+					new_image = new_image.resize(self.cam_size)
+					new_frame = ImageTk.PhotoImage(image = new_image)
+					self.cams[cam].config(image = new_frame)
+					self.cams[cam].image = new_frame
+		else:
 			if(client_id in self.cams):
-				self.cam_size = (int(math.ceil(16 * (40 - math.log(self.grid_size**2) * 6 - (self.width_screen / (self.actual_window_width/6))))),
-								int(math.ceil(9 * (40 - math.log(self.grid_size**2) * 6 - (self.height_screen / (self.actual_window_height/6))))))	#decide la grandezza delle webcam
 				new_image = Image.open(io.BytesIO(new_image_frame))
 				new_image = new_image.resize(self.cam_size)
 				new_frame = ImageTk.PhotoImage(image = new_image)
 				self.cams[client_id].config(image = new_frame)
 				self.cams[client_id].image = new_frame
-				self.computeSize()
+
+	#aggiorna l'immagine di una webcam
+	def updateCam(self, client_id, new_image_frame):
+		try:
+			self.computeSize(client_id, new_image_frame)
 		except RuntimeError as e:
-			# print(e, "client eliminato durante il refresh dell'immagine")
+			print(e, "client eliminato durante il refresh dell'immagine")
 			pass
+		except KeyError as e:
+			print(e, "client eliminato durante il refresh dell'immagine")
 		except AttributeError as e:
 			pass
-			# print(e, "byte dell'immagine non valdi")
+			print(e, "byte dell'immagine non valdi")
 
 	def addCam(self, client_id):
 			if not self.cams_container:	#se la root non è pronta
