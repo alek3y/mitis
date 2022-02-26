@@ -23,6 +23,8 @@ logging.basicConfig(format="%(levelname)s: %(message)s", level=logging.DEBUG)
 client = Connection()
 
 webcam = cv2.VideoCapture(0)
+webcam_disabled = False
+
 webcam.set(cv2.CAP_PROP_FRAME_WIDTH, WEBCAM_WIDTH)
 webcam.set(cv2.CAP_PROP_FRAME_HEIGHT, WEBCAM_WIDTH*9/16)
 
@@ -52,16 +54,25 @@ def heartbeat():
 		time.sleep(HEARTBEAT_INTERVAL)
 
 def streaming_video(gui, webcam):
-	global join_response
+	global join_response, webcam_disabled
 
 	join_response.acquire()
 	gui.addCam(None)
 	gui.updateCam(None, VIDEO_MISSING)
 
+	video_disabled_sent = False
 	while True:
 		success, frame = webcam.read()
 		if not success:
 			break
+
+		if webcam_disabled:
+			if not video_disabled_sent:
+				send(Packet.Type.VIDEO, VIDEO_MISSING)
+				gui.updateCam(None, VIDEO_MISSING)
+				video_disabled_sent = True
+			continue
+		video_disabled_sent = False
 
 		frame = imutils.resize(frame, width=WEBCAM_WIDTH)
 		frame_bytes = cv2.imencode(
@@ -146,6 +157,11 @@ def ask_join(room):
 	send(Packet.Type.JOIN, room)
 	join_request.release()
 
+def video_disable():
+	global webcam_disabled
+
+	webcam_disabled = not webcam_disabled
+
 if __name__ == "__main__":
 	receiver = Receiver(client)
 	receiver.start()
@@ -158,7 +174,8 @@ if __name__ == "__main__":
 	gui = Gui(
 		ask_join,
 		lambda text: send(Packet.Type.CHAT, text),
-		recorder.mute
+		recorder.mute,
+		video_disable
 	)
 
 	logging.debug("Starting heartbeat periodic signal")
