@@ -8,6 +8,7 @@
 # #TODO fixare bottone che si preme solo in focus
 import tkinter as tk
 from tkinter import ttk
+from tkinter import filedialog
 from PIL import ImageTk, Image
 from ttkthemes import ThemedTk
 import io
@@ -19,6 +20,7 @@ PLACEHOLDER = "Inserisci un messaggio... "
 mic_status = True
 cam_status = True
 subtitles_status = False
+mask_status = False
 
 class Gui:
 	def __init__(self, roomJoiner, messageHandler, muteHandler, camHandler):
@@ -31,6 +33,7 @@ class Gui:
 		self.messageHandler = messageHandler
 		self.muteHandler = muteHandler
 		self.camHandler = camHandler
+		self.mask = ""
 		self.last_talker = ""	#indica a quale client appartengono gli ultimi sottotitoli
 		self.line1 = ""	#prima riga di sottotitoli
 		self.line2 = "" #seconda riga di sottotitoli
@@ -230,6 +233,19 @@ class Gui:
 				row_number += 1
 				column_number = 0
 			else: column_number += 1
+	
+	def selectMask(self, event, mask_button):
+		global mask_status
+		if(mask_status):
+			self.mask = ""
+			mask_button.config(image = self.mask_off)
+			mask_status = False
+		else:
+			filetypes = (('image', '*.png'),)
+			filename = filedialog.askopenfilename(title = "Scegli una maschera", initialdir = "masks", filetypes = filetypes)
+			self.mask = filename
+			mask_button.config(image = self.mask_on)
+			mask_status = True
 
 	#crea il layout della finestra dopo che si è entrati in una stanza
 	def createWindow(self):
@@ -249,10 +265,10 @@ class Gui:
 		cam_on = tk.PhotoImage(file = "assets/cam.png")
 		self.send = tk.PhotoImage(file = "assets/send_message.png")
 		self.filters = tk.PhotoImage(file = "assets/filters.png")
-		self.mask = tk.PhotoImage(file = "assets/mask.png")
+		self.mask_off = tk.PhotoImage(file = "assets/mask.png")
+		self.mask_on = tk.PhotoImage(file = "assets/remove_mask.png")
 		subtitles_off = tk.PhotoImage(file = "assets/subtitles_off.png")
 		subtitles_on = tk.PhotoImage(file = "assets/subtitles.png")
-
 
 		subtitles_container = ttk.Frame(self.root)
 		self.subtitle = ttk.Label(subtitles_container, text = "", font = FONT)
@@ -289,8 +305,9 @@ class Gui:
 
 		tools = ttk.Frame(self.root)	#frame che contiene tutti i tools secondari
 
-		filters_button= ttk.Button(tools, image = self.filters)
-		mask_button= ttk.Button(tools, image = self.mask)
+		filters_button = ttk.Button(tools, image = self.filters)
+		mask_button = ttk.Button(tools, image = self.mask_off)
+		mask_button.bind("<ButtonPress>", lambda event:self.selectMask(event, mask_button))
 		subtitles_button= ttk.Button(tools, image = subtitles_off)
 		subtitles_button.bind("<ButtonRelease>", lambda event:self.subtitlesToggle(event, subtitles_button, subtitles_off, subtitles_on))
 
