@@ -1,6 +1,7 @@
 from connection import *
 from gui import Gui
 from audio import AudioPlayer, AudioHandler, SpeechRecognition
+from tools import Mask
 from threading import Thread, Semaphore
 from queue import Queue
 import cv2, imutils
@@ -54,7 +55,7 @@ def heartbeat():
 		send(Packet.Type.HEARTBEAT)
 		time.sleep(HEARTBEAT_INTERVAL)
 
-def streaming_video(gui, webcam):
+def streaming_video(gui, webcam, mask):
 	global join_response, webcam_disabled
 
 	join_response.acquire()
@@ -76,6 +77,9 @@ def streaming_video(gui, webcam):
 		video_disabled_sent = False
 
 		frame = imutils.resize(frame, width=WEBCAM_WIDTH)
+		if gui.mask:
+			frame = mask.face_mask(frame, gui.mask)
+
 		frame_bytes = cv2.imencode(
 			".jpg", frame,
 			(cv2.IMWRITE_JPEG_QUALITY, WEBCAM_QUALITY)
@@ -189,7 +193,7 @@ if __name__ == "__main__":
 	logging.debug("Starting streaming threads")
 	Thread(
 		target=streaming_video,
-		args=(gui, webcam),
+		args=(gui, webcam, Mask()),
 		daemon=True
 	).start()
 
