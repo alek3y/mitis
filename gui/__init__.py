@@ -31,6 +31,9 @@ class Gui:
 		self.messageHandler = messageHandler
 		self.muteHandler = muteHandler
 		self.camHandler = camHandler
+		self.last_talker = ""	#indica a quale client appartengono gli ultimi sottotitoli
+		self.line1 = ""	#prima riga di sottotitoli
+		self.line2 = "" #seconda riga di sottotitoli
 		self.root = ThemedTk(theme = "breeze")	#finestra padre con tema breeze
 		self.root.title("Mitis")
 		self.width_screen = self.root.winfo_screenwidth()	# larghezza dello schermo
@@ -76,7 +79,6 @@ class Gui:
 			mic_status = True
 		self.muteHandler()
 
-
 	def camToggle(self, event, cam_button, cam_off, cam_on):
 		global cam_status
 		if(cam_status):	#se la cam è attiva
@@ -98,12 +100,28 @@ class Gui:
 				subtitles_button.config(image = subtitles_on)
 				subtitles_status = True
 
-	def placeSubtitle(self, line):
+	def placeSubtitle(self, name, line):
 		global subtitles_status
 		if subtitles_status:
-			if(len(line) + len(self.subtitle["text"]) > 45):
-				self.subtitle["text"] = line
-			else: self.subtitle["text"] += " " + line
+			if (not line):	#se il sottotitolo è vuoto non fa nulla
+				pass
+			elif (len(line) + len(self.subtitle["text"]) > 45 or self.last_talker != name):	#se la lughezza è troppo lunga o se è un altro client a parlare
+				if (not self.line1):	#se la prima riga del sottotitolo è vuota
+					self.line1 = line
+					self.subtitle["text"] = name + ": " + self.line1	#stampa nella prima riga
+				elif (not self.line2):	#se la seconda è vuota
+					self.line2 = line
+					self.subtitle["text"] += "\n" + name + ": " + self.line2 	#lascia la prima e scrive nella seconda
+				else:	#se entrambe contengono testo
+					self.line1 = self.line2	#la prima diventa la seconda
+					self.line2 = line	#la seconda diventa la nuova
+					self.subtitle["text"] = self.last_talker + ": " + self.line1 + "\n" + name + ": " + self.line2	#la seconda va in cima e l'ultima va alla seconda riga
+			
+			elif (not self.subtitle["text"]):	#se il sottotitolo precedente è vuoto
+				self.subtitle["text"] += name + ": " + line
+			else:
+				self.subtitle["text"] += " " + line	#appende il sottotitolo a quello precedente
+		self.last_talker = name
 
 	def clearTextbox(self, event, text):
 		if (text.get() == PLACEHOLDER):
