@@ -145,8 +145,10 @@ def heartbeat_monitor():
 	global clients, heartbeats
 
 	while True:
-		clients_to_check = list(heartbeats.keys())
-		for client_id in clients_to_check:
+		for client_id in list(heartbeats.keys()):
+			if client_id not in heartbeats:
+				continue
+
 			if time.time() - heartbeats[client_id] >= HEARTBEAT_FAIL_DELAY:
 				logging.debug(f"Removing client '{client_id}' for interrupted heartbeat")
 				room_id = client_get_room(client_id)
