@@ -39,9 +39,9 @@ def client_get_id(client_address):
 	global clients
 
 	client_id = None
-	for client_id in clients:
-		if clients[client_id] == client_address:
-			client_id = client_id
+	for remote_client_id in clients:
+		if clients[remote_client_id] == client_address:
+			client_id = remote_client_id
 			break
 	return client_id
 
