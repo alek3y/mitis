@@ -12,7 +12,7 @@ import time
 
 SERVER_ADDRESS = (socket.gethostbyname("dev.alek3y.com"), 4444)
 SERVER_REPLY_TIMEOUT = 5
-PACKET_TIMEOUT = 0.1
+PACKET_TIMEOUT = 0.1	# Tempo di attesa di un pacchetto generico
 HEARTBEAT_INTERVAL = 4
 
 WEBCAM_WIDTH = 400
@@ -33,9 +33,6 @@ webcam.set(cv2.CAP_PROP_FRAME_HEIGHT, WEBCAM_WIDTH*9/16)
 audio_incoming = {
 	# client_id: (audio_queue, player)
 }
-
-# TODO: https://github.com/PyImageSearch/imutils/pull/237
-#streaming = True
 
 JOIN_WAITING = 2	# Thread che aspettano per la conferma di accesso
 join_timeout = SERVER_REPLY_TIMEOUT
@@ -58,7 +55,7 @@ def heartbeat():
 def streaming_video(gui, webcam, mask):
 	global join_response, webcam_disabled
 
-	join_response.acquire()
+	join_response.acquire()	# Attesa della conferma di join dal server
 	gui.addCam(None)
 	gui.updateCam(None, VIDEO_MISSING)
 
@@ -69,11 +66,14 @@ def streaming_video(gui, webcam, mask):
 			break
 
 		if webcam_disabled:
+
+			# Invia una volta a tutti l'immagine della webcam spenta
 			if not video_disabled_sent:
 				send(Packet.Type.VIDEO, VIDEO_MISSING)
 				gui.updateCam(None, VIDEO_MISSING)
 				video_disabled_sent = True
-			continue
+
+			continue	# Ignora completamente il frame della webcam
 		video_disabled_sent = False
 
 		frame = imutils.resize(frame, width=WEBCAM_WIDTH)
@@ -96,7 +96,7 @@ def packets_hello(gui, recorder, receiver):
 	global audio_incoming
 
 	while True:
-		join_request.acquire()
+		join_request.acquire()	# Attesa dell'invio della richiesta di join
 		while True:
 			try:
 				(client_id, _), _ = receiver.next(Packet.Type.HELLO, timeout=join_timeout)
@@ -105,25 +105,35 @@ def packets_hello(gui, recorder, receiver):
 				gui.failJoin()
 				break
 
+			# Un HELLO senza ID del client sorgente indica l'avvenuta
+			# connessione al server
 			if not client_id:
 				gui.createWindow()
 				logging.info("Successfully connected to remote server")
-				join_timeout = None
+				join_timeout = None	# Attesa indeterminata per il prossimo pacchetto
 
+				# Annuncia a tutti i thread l'avvenuta connessione
 				for i in range(JOIN_WAITING):
 					join_response.release()
 
 				logging.debug("Starting audio recorder")
 				recorder.start()
+
+			# Un HELLO con client ID indica il join di un client
 			else:
 				gui.addCam(client_id)
 				gui.updateCam(client_id, VIDEO_MISSING)
+
+				# Avvio del thread audio per questo client
 				audio_queue = Queue()
 				player = AudioPlayer(audio_queue)
 				player.start()
 				audio_incoming[client_id] = (audio_queue, player)
+
 				logging.debug(f"Client '{client_id}' joined the room")
 
+# Thread per l'attesa di pacchetti generici che non hanno bisogno di
+# controllo e gestione immediata
 def packets_generic(gui, receiver):
 	global audio_incoming
 
@@ -136,14 +146,18 @@ def packets_generic(gui, receiver):
 
 			if t == Packet.Type.CHAT:
 				gui.receiveMessage(client_id, content)
-			elif t == Packet.Type.QUIT:
-				gui.removeCam(client_id)
-				player = audio_incoming[client_id][1]
-				player.stop()
-				audio_incoming.pop(client_id)
-				logging.debug(f"Client '{client_id}' left the room")
+
 			elif t == Packet.Type.CAPTIONS:
 				gui.placeSubtitle(client_id, content)
+
+			elif t == Packet.Type.QUIT:
+				gui.removeCam(client_id)
+
+				# Rimozione del player audio del client in uscita
+				audio_incoming[client_id][1].stop()
+				audio_incoming.pop(client_id)
+
+				logging.debug(f"Client '{client_id}' left the room")
 
 def packets_video(gui, receiver):
 	while True:
@@ -155,7 +169,7 @@ def packets_audio(receiver):
 		(client_id, _), audio_bytes = receiver.next(Packet.Type.AUDIO)
 
 		if client_id in audio_incoming:
-			audio_incoming[client_id][0].put(audio_bytes)
+			audio_incoming[client_id][0].put(audio_bytes)	# Aggiunta del chunk alla coda audio del client
 
 def ask_join(room):
 	global join_request
@@ -178,10 +192,10 @@ if __name__ == "__main__":
 
 	logging.debug("Building graphical user interface")
 	gui = Gui(
-		ask_join,
-		lambda text: send(Packet.Type.CHAT, text),
-		recorder.mute,
-		video_disable
+		ask_join,	# Gestione textbox per entrare in una stanza
+		lambda text: send(Packet.Type.CHAT, text),	# Gestione messaggi in uscita
+		recorder.mute,	# Mute
+		video_disable	# Disattivazione la webcam
 	)
 
 	logging.debug("Starting heartbeat periodic signal")
@@ -199,8 +213,8 @@ if __name__ == "__main__":
 
 	logging.debug("Starting captions engine")
 	SpeechRecognition(
-		recorder,
-		lambda caption: send(Packet.Type.CAPTIONS, caption)
+		recorder,	# Thread per la registrazione audio
+		lambda caption: send(Packet.Type.CAPTIONS, caption)	# Gestione sottotitoli
 	).start()
 
 	logging.debug("Starting packets handler threads")

@@ -5,7 +5,7 @@ import time
 
 BINDING = ("0.0.0.0", 4444)
 HEARTBEAT_CHECK_INTERVAL = 3
-HEARTBEAT_FAIL_DELAY = 12	# Dopo questi secondi il client viene disconnesso
+HEARTBEAT_FAIL_DELAY = 12	# Tempo per la disconnessione del client
 
 logging.basicConfig(format="%(levelname)s: %(message)s", level=logging.DEBUG)
 
@@ -22,14 +22,19 @@ heartbeats = {
 	# client_id: last_time
 }
 
+# Generazione dell'ID del client
 def client_new_id(clients):
 	assert len(clients) < len(CLIENTID_CHARS)**CLIENTID_LENGTH
 
 	while True:
 		client_id = "".join([
-			random.choice(CLIENTID_CHARS) for i in range(CLIENTID_LENGTH)
+
+			# Scelta di lettere a caso tra i caratteri possibili
+			random.choice(CLIENTID_CHARS)
+			for i in range(CLIENTID_LENGTH)
 		])
 
+		# Riprova quando l'ID è già in uso
 		if client_id not in clients:
 			break
 
@@ -57,6 +62,7 @@ def client_get_room(client_id):
 
 	return room_id
 
+# Trova sia l'ID che la stanza di un client
 def client_get_all(client_address):
 	client_id = client_get_id(client_address)
 	if not client_id:
@@ -67,11 +73,12 @@ def client_get_all(client_address):
 
 def packet_heartbeat(client_id):
 	global heartbeats
-	heartbeats[client_id] = time.time()
+	heartbeats[client_id] = time.time()	# Salva l'ultimo heartbeat ricevuto
 
 def packet_join(source_address, room_id):
 	global clients, rooms, server, heartbeats
 
+	# Ignora i client già registrati
 	if source_address in clients.values():
 		return
 
@@ -96,11 +103,16 @@ def packet_join(source_address, room_id):
 	rooms[room_id].add(client_id)
 	packet_heartbeat(client_id)
 
+# Invia un pacchetto a tutti i client della sua stanza
 def packet_forward(client_id, room_id, packet):
 	global clients, rooms, server
 
 	for remote_client_id in rooms[room_id] - {client_id,}:
-		server.send(packet, clients[remote_client_id], client_id)
+		server.send(
+			packet,
+			clients[remote_client_id],
+			client_id	# Reinvia il pacchetto impersonando il client sorgente
+		)
 
 def packet_quit(source_client_id, room_id):
 	global clients, rooms, heartbeats
@@ -124,7 +136,7 @@ def packet_handler(source_client, packet):
 	else:
 		source_client_id, room_id = client_get_all(source_address)
 		if not source_client_id:
-			return
+			return	# Ignora i client non registrati
 
 		if packet.type == Packet.Type.HEARTBEAT:
 			packet_heartbeat(source_client_id)
@@ -149,6 +161,7 @@ def heartbeat_monitor():
 			if client_id not in heartbeats:
 				continue
 
+			# Controlla che l'ultimo heartbeat del client sia nei limiti
 			if time.time() - heartbeats[client_id] >= HEARTBEAT_FAIL_DELAY:
 				logging.debug(f"Removing client '{client_id}' for interrupted heartbeat")
 				room_id = client_get_room(client_id)
