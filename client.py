@@ -93,7 +93,7 @@ def streaming_video(gui, webcam, mask):
 
 def packets_hello(gui, recorder, receiver):
 	global join_request, join_response, join_timeout
-	global audio_queue
+	global audio_incoming
 
 	while True:
 		join_request.acquire()
@@ -125,7 +125,7 @@ def packets_hello(gui, recorder, receiver):
 				logging.debug(f"Client '{client_id}' joined the room")
 
 def packets_generic(gui, receiver):
-	global audio_queue
+	global audio_incoming
 
 	while True:
 		for t in (Packet.Type.CHAT, Packet.Type.QUIT, Packet.Type.CAPTIONS):
@@ -143,7 +143,7 @@ def packets_generic(gui, receiver):
 				audio_incoming.pop(client_id)
 				logging.debug(f"Client '{client_id}' left the room")
 			elif t == Packet.Type.CAPTIONS:
-				gui.placeSubtitle(content)
+				gui.placeSubtitle(client_id, content)
 
 def packets_video(gui, receiver):
 	while True:
