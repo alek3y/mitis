@@ -1,9 +1,9 @@
 from connection import *
 from gui import Gui
 from audio import AudioPlayer, AudioHandler, SpeechRecognition
-from tools import Mask, Filter
 from threading import Thread, Semaphore
 from queue import Queue
+import tools
 import cv2, imutils
 import pygame
 import sys
@@ -52,7 +52,7 @@ def heartbeat():
 		send(Packet.Type.HEARTBEAT)
 		time.sleep(HEARTBEAT_INTERVAL)
 
-def streaming_video(gui, webcam, mask, filters):
+def streaming_video(gui, webcam):
 	global join_response, webcam_disabled
 
 	join_response.acquire()	# Attesa della conferma di join dal server
@@ -76,13 +76,13 @@ def streaming_video(gui, webcam, mask, filters):
 			continue	# Ignora completamente il frame della webcam
 		video_disabled_sent = False
 
-		frame = imutils.resize(frame, width=WEBCAM_WIDTH)
 		if gui.mask:
-			frame = mask.face_mask(frame, gui.mask)
+			frame = tools.face_mask(frame, gui.mask)
 
 		for enabled_filter in gui.filters:
-			frame = filters.apply_filter(enabled_filter, frame)
+			frame = tools.apply_filter(enabled_filter, frame)
 
+		frame = imutils.resize(frame, width=WEBCAM_WIDTH)
 		frame_bytes = cv2.imencode(
 			".jpg", frame,
 			(cv2.IMWRITE_JPEG_QUALITY, WEBCAM_QUALITY)
@@ -210,7 +210,7 @@ if __name__ == "__main__":
 	logging.debug("Starting streaming threads")
 	Thread(
 		target=streaming_video,
-		args=(gui, webcam, Mask(), Filter()),
+		args=(gui, webcam),
 		daemon=True
 	).start()
 
