@@ -21,6 +21,7 @@ mic_status = True
 cam_status = True
 subtitles_status = False
 mask_status = False
+filters_status = False
 
 class Gui:
 	def __init__(self, roomJoiner, messageHandler, muteHandler, camHandler):
@@ -34,6 +35,7 @@ class Gui:
 		self.muteHandler = muteHandler
 		self.camHandler = camHandler
 		self.mask = ""
+		self.filters = []	#lista che contiene i filtri attivi
 		self.last_talker = ""	#indica a quale client appartengono gli ultimi sottotitoli
 		self.line1 = ""	#prima riga di sottotitoli
 		self.line2 = "" #seconda riga di sottotitoli
@@ -189,14 +191,12 @@ class Gui:
 	def updateCam(self, client_id, new_image_frame):
 		try:
 			self.computeSize(client_id, new_image_frame)
-		except RuntimeError as e:
-			print(e, "client eliminato durante il refresh dell'immagine")
+		except RuntimeError as e:	#client eliminato durante il refresh dell'immagine
 			pass
-		except KeyError as e:
-			print(e, "client eliminato durante il refresh dell'immagine")
-		except AttributeError as e:
+		except KeyError as e:	#client eliminato durante il refresh dell'immagine
 			pass
-			print(e, "byte dell'immagine non valdi")
+		except AttributeError as e:	#byte dell'immagine non valdi
+			pass
 
 	def addCam(self, client_id):
 			if not self.cams_container:	#se la root non è pronta
@@ -243,13 +243,46 @@ class Gui:
 		else:
 			filetypes = (('image', '*.png'),)
 			filename = filedialog.askopenfilename(title = "Scegli una maschera", initialdir = "masks", filetypes = filetypes)
-			self.mask = filename
-			mask_button.config(image = self.mask_on)
-			mask_status = True
+			if (filename):
+				self.mask = filename
+				mask_button.config(image = self.mask_on)
+				mask_status = True
+
+	def showFilters(self, event, filters_button):
+		global filters_status
+		if(filters_status):
+			filters_button.config(image = self.filters_off)
+			self.grayscale.pack_forget()
+			self.blur.pack_forget()
+			self.invert.pack_forget()
+			self.mirror.pack_forget()
+			filters_status = False
+		else:
+			filters_button.config(image = self.hide_filters)
+			self.grayscale.pack()
+			self.blur.pack(pady = 2)
+			self.invert.pack()
+			self.mirror.pack(pady = 2)
+			filters_status = True
+
+	def toggleFilter(self, event, button, filter_name):
+		if filter_name in self.filters:
+			self.filters.remove(filter_name)
+			button["style"] = "TButton"
+		else:
+			self.filters.append(filter_name)
+			button["style"] = "W.TButton"
 
 	#crea il layout della finestra dopo che si è entrati in una stanza
 	def createWindow(self):
 		self.dialog.pack_forget()
+		highlight_style = ttk.Style()
+		highlight_style.configure("W.TButton",
+						font = ("monospace", 9, "bold"),
+						foreground = "green")
+		normal_style = ttk.Style()
+		normal_style.configure("TButton",
+						font = ("monospace", 9, "bold"),)
 
 		#creazione delle colonne e delle righe
 		self.root.columnconfigure(0, weight = 1)
@@ -264,7 +297,8 @@ class Gui:
 		cam_off = tk.PhotoImage(file = "assets/cam_off.png")
 		cam_on = tk.PhotoImage(file = "assets/cam.png")
 		self.send = tk.PhotoImage(file = "assets/send_message.png")
-		self.filters = tk.PhotoImage(file = "assets/filters.png")
+		self.filters_off = tk.PhotoImage(file = "assets/filters.png")
+		self.hide_filters = tk.PhotoImage(file = "assets/hide_filters.png")
 		self.mask_off = tk.PhotoImage(file = "assets/mask.png")
 		self.mask_on = tk.PhotoImage(file = "assets/remove_mask.png")
 		subtitles_off = tk.PhotoImage(file = "assets/subtitles_off.png")
@@ -304,16 +338,29 @@ class Gui:
 		send_message_wrapper.grid(column = 2, row = 1, sticky = "e")
 
 		tools = ttk.Frame(self.root)	#frame che contiene tutti i tools secondari
+		
+		filters = ttk.Frame(tools)
+		self.grayscale = ttk.Button(filters, text = "scala grigi", width = 13)
+		self.grayscale.bind("<ButtonRelease>", lambda event:self.toggleFilter(event, self.grayscale, "grayscale"))
+		self.blur = ttk.Button(filters, text = "sfocato", width = 13)
+		self.blur.bind("<ButtonRelease>", lambda event:self.toggleFilter(event, self.blur, "blur"))
+		self.invert = ttk.Button(filters, text = "inverti vert.", width = 13)
+		self.invert.bind("<ButtonRelease>", lambda event:self.toggleFilter(event, self.invert, "invert"))
+		self.mirror = ttk.Button(filters, text = "specchio", width = 13)
+		self.mirror.bind("<ButtonRelease>", lambda event:self.toggleFilter(event, self.mirror, "mirror"))
 
-		filters_button = ttk.Button(tools, image = self.filters)
+		filters.pack()
+
+		filters_button = ttk.Button(tools, image = self.filters_off)
+		filters_button.bind("<ButtonRelease>", lambda event:self.showFilters(event, filters_button))
 		mask_button = ttk.Button(tools, image = self.mask_off)
 		mask_button.bind("<ButtonPress>", lambda event:self.selectMask(event, mask_button))
 		subtitles_button= ttk.Button(tools, image = subtitles_off)
 		subtitles_button.bind("<ButtonRelease>", lambda event:self.subtitlesToggle(event, subtitles_button, subtitles_off, subtitles_on))
 
-		filters_button.pack(side = "top", pady = 10)
-		mask_button.pack(side = "top")
-		subtitles_button.pack(side = "top", pady = 10)
+		filters_button.pack(side = "top")
+		mask_button.pack(side = "top", pady = 7)
+		subtitles_button.pack(side = "top")
 
 		tools.grid(column = 0, row = 0)
 
