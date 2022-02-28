@@ -16,14 +16,14 @@ def apply_filter(filter, frame):
 
     elif filter == "mirror": 
         frame_flip = cv2.flip(frame,1)
-        return np.hstack([frame,frame_flip])
+        return np.hstack([frame,frame_flip]) # incolla 2 frame
 
 
 def face_mask(frame, overlay_image):
-    overlay_image = cv2.imread(overlay_image, cv2.IMREAD_UNCHANGED)
+    overlay_image = cv2.imread(overlay_image, cv2.IMREAD_UNCHANGED) # IMREAD_UNCHANGED per consentire la lettura di immagini png trasparenti
     gray_scale = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     faces = FACES_CASCADE.detectMultiScale(gray_scale, 1.1, 4)
     for (x, y, w, h) in faces:
-        overlay_resize = cv2.resize(overlay_image, (w, h))
+        overlay_resize = cv2.resize(overlay_image, (w, h)) 
         frame = cvzone.overlayPNG(frame, overlay_resize, [x,y])
     return frame
