@@ -5,7 +5,6 @@
 # pip3 install imutils
 # pip3 install opencv-python
 # # keybinds: https://www.pythontutorial.net/tkinter/tkinter-event-binding/
-# #TODO fixare bottone che si preme solo in focus
 import tkinter as tk
 from tkinter import ttk
 from tkinter import filedialog
@@ -24,6 +23,10 @@ mask_status = False
 filters_status = False
 
 class Gui:
+	#roomJoiner: comunica al client la stanza a cui unirsi (il client lo invierà poi al server)
+	#messageHandler: comunicazione tra gui e client per l'invio dei messaggi
+	#muteHandler: comunicazione tra gui e client per comunicare lo stato del microfono
+	#camHandler: per comunicare lo stato della cam
 	def __init__(self, roomJoiner, messageHandler, muteHandler, camHandler):
 		self.grid_size = 1	#numero di righe e di colonne delle cam (dato che è un quadrato: colonne = righe)
 		self.counter_size = 1
@@ -34,7 +37,7 @@ class Gui:
 		self.messageHandler = messageHandler
 		self.muteHandler = muteHandler
 		self.camHandler = camHandler
-		self.mask = ""
+		self.mask = ""	#contiene il nome della maschera attiva
 		self.filters = []	#lista che contiene i filtri attivi
 		self.last_talker = ""	#indica a quale client appartengono gli ultimi sottotitoli
 		self.line1 = ""	#prima riga di sottotitoli
@@ -43,7 +46,8 @@ class Gui:
 		self.root.title("Mitis")
 		self.width_screen = self.root.winfo_screenwidth()	# larghezza dello schermo
 		self.height_screen = self.root.winfo_screenheight() # altezza dello schermo
-		self.root.geometry(f"{self.width_screen}x{self.height_screen}")
+		# self.root.geometry(f"{self.width_screen}x{self.height_screen}")
+		self.root.attributes('-zoomed', True)
 		self.root.minsize(704, 396)	#grandezza minima finestra
 		self.actual_window_width = self.width_screen
 		self.actual_window_height = self.height_screen
@@ -181,9 +185,9 @@ class Gui:
 					new_image = ImageTk.getimage(self.cams[cam].image)
 					new_image = new_image.resize(self.cam_size)
 					w, h = FONT_IMAGE.getsize(cam)
-					client_name = ImageDraw.Draw(new_image)
-					client_name.rectangle((0, 0, 2 + w, h), fill = "white")	#sfondo etichetta
-					client_name.text((x, y), cam, fill = "#1c1c1c", font = FONT_IMAGE) #testo etichetta
+					client_name = ImageDraw.Draw(new_image, "RGBA")
+					client_name.rectangle((0, 0, 2 + w, h), fill = (38, 38, 38, 100))	#sfondo etichetta
+					client_name.text((x, y), cam, fill = "white", font = FONT_IMAGE) #testo etichetta
 					new_frame = ImageTk.PhotoImage(image = new_image)
 					self.cams[cam].config(image = new_frame)
 					self.cams[cam].image = new_frame
@@ -192,17 +196,17 @@ class Gui:
 				new_image = Image.open(io.BytesIO(new_image_frame))
 				new_image = new_image.resize(self.cam_size)
 				w, h = FONT_IMAGE.getsize(client_id)
-				client_name = ImageDraw.Draw(new_image)
-				client_name.rectangle((0, 0, 2 + w, h), fill = "white")	#sfondo etichetta
-				client_name.text((x, y), client_id, fill = "#1c1c1c", font = FONT_IMAGE) #testo etichetta
-				new_frame = ImageTk.PhotoImage(image = new_image) 
+				client_name = ImageDraw.Draw(new_image, "RGBA")
+				client_name.rectangle((0, 0, 2 + w, h), fill = (38, 38, 38, 100))	#sfondo etichetta
+				client_name.text((x, y), client_id, fill = "white", font = FONT_IMAGE) #testo etichetta
+				new_frame = ImageTk.PhotoImage(image = new_image)
 				self.cams[client_id].config(image = new_frame)
 				self.cams[client_id].image = new_frame
 
 	#aggiorna l'immagine di una webcam
 	def updateCam(self, client_id, new_image_frame):
 		if client_id is None:
-			client_id = "tu"
+			client_id = "Tu"
 		try:
 			self.computeSize(client_id, new_image_frame)
 		except RuntimeError as e:	#client eliminato durante il refresh dell'immagine
@@ -214,7 +218,7 @@ class Gui:
 
 	def addCam(self, client_id):
 		if client_id is None:
-			client_id = "tu"
+			client_id = "Tu"
 		if not self.cams_container:	#se la root non è pronta
 			self.temp_client_list.append(client_id)	#salva il client appena collegato in una lista temporanea
 		else:
@@ -327,13 +331,10 @@ class Gui:
 		communication_tools = ttk.Frame(self.root)	#frame che contiene i bottoni per il mute e lo spegnimento della cam
 
 		mute_button = ttk.Button(communication_tools, image = mic_on)
-		mute_button.bind("<Control-m>", lambda event:self.micToggle(event, mute_button, mic_off, mic_on))	#shortcut: ctrl + m
 		mute_button.bind("<ButtonRelease>", lambda event:self.micToggle(event, mute_button, mic_off, mic_on))	#chiama la funzione anche con il click del mouse quando rilasciato
-		mute_button.focus()	#rende il bottone sotto focus di default (per far funzionare la shortcut il bottone deve essere in focus)
 		mute_button.pack(side = "right", padx = 5)
 
 		cam_button = ttk.Button(communication_tools, image = cam_on)
-		cam_button.bind("<Control-w>", lambda event:self.camToggle(event, cam_button, cam_off, cam_on))	#shortcut: ctrl + m
 		cam_button.bind("<ButtonRelease>", lambda event:self.camToggle(event, cam_button, cam_off, cam_on))	#chiama la funzione anche con il click del mouse quando rilasciato
 		cam_button.pack(side = "right")
 
@@ -349,7 +350,6 @@ class Gui:
 
 		send_button = ttk.Button(send_message_wrapper, image = self.send)
 		send_button.bind("<ButtonRelease>", lambda event:self.sendMessage(event, text))
-		self.root.bind("<Return>", lambda event:self.sendMessage(event, text))
 		send_button.pack(padx = 5, pady = 1)
 		send_message_wrapper.grid(column = 2, row = 1, sticky = "e")
 
@@ -383,10 +383,6 @@ class Gui:
 		self.cams_container = ttk.Frame(self.root)
 		self.cams_container.grid(column = 1, row = 0)
 
-		for i in self.temp_client_list:
-			self.layoutCam(i)
-		self.temp_client_list.clear()
-		
 		self.chat = ttk.Frame(self.root)
 		self.text_chat = tk.Text(self.chat,
 								width = 51,
@@ -404,5 +400,16 @@ class Gui:
 		self.text_chat.grid(column = 0, row = 0, sticky="snew")
 
 		self.chat.grid(column = 2, row = 0, sticky = "ne")
+		
+		#shortcut
+		self.root.bind("<Control-m>", lambda event:self.micToggle(event, mute_button, mic_off, mic_on))	#ctrl + m = mute/unmute
+		self.root.bind("<Control-w>", lambda event:self.camToggle(event, cam_button, cam_off, cam_on))	#ctrl + w = cam off/cam on
+		self.root.bind("<Return>", lambda event:self.sendMessage(event, text))	#enter = send message
+		self.root.bind("<Control-s>", lambda event:self.subtitlesToggle(event, subtitles_button, subtitles_off, subtitles_on))	#ctrl + s = subtitles off/subtitles on
+		self.root.bind("<Control-k>", lambda event:self.selectMask(event, mask_button))	#ctrl + k = select mask
 
 		self.root.bind("<Configure>", self.resizeWindow)
+		
+		for i in self.temp_client_list:
+			self.layoutCam(i)
+		self.temp_client_list.clear()
