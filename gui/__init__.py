@@ -9,13 +9,13 @@
 import tkinter as tk
 from tkinter import ttk
 from tkinter import filedialog
-from PIL import ImageTk, Image
+from PIL import ImageTk, Image, ImageDraw, ImageFont
 from ttkthemes import ThemedTk
 import io
 import math
 
-
 FONT = ("Monospace", 11)
+FONT_IMAGE = ImageFont.truetype("assets/DejaVuSansMono.ttf", 12)	#font dell'etichetta
 PLACEHOLDER = "Inserisci un messaggio... "
 mic_status = True
 cam_status = True
@@ -170,12 +170,20 @@ class Gui:
 	def computeSize(self, client_id = "", new_image_frame = None):
 		self.cam_size = (int(math.ceil(16 * (40 - math.log(self.grid_size**2) * 8 - (self.width_screen / (self.actual_window_width/7))))),
 	 					int(math.ceil(9 * (40 - math.log(self.grid_size**2) * 6 - (self.height_screen / (self.actual_window_height/6))))))	#decide la grandezza delle webcam
+		if(self.cam_size[0] < 32 or self.cam_size[1] < 18):
+			self.cam_size = (32, 18)
+
 		temp_cams = list(self.cams.keys())
-		if not client_id and new_image_frame is None:
+		x, y = (1, 0)	#coordinate iniziali (alto-sinistra) per la creazione dell'etichetta della webcam
+		if (not client_id and new_image_frame is None):
 			for cam in temp_cams:
 				if(cam in self.cams):
 					new_image = ImageTk.getimage(self.cams[cam].image)
 					new_image = new_image.resize(self.cam_size)
+					w, h = FONT_IMAGE.getsize(cam)
+					client_name = ImageDraw.Draw(new_image)
+					client_name.rectangle((0, 0, 2 + w, h), fill = "white")	#sfondo etichetta
+					client_name.text((x, y), cam, fill = "#1c1c1c", font = FONT_IMAGE) #testo etichetta
 					new_frame = ImageTk.PhotoImage(image = new_image)
 					self.cams[cam].config(image = new_frame)
 					self.cams[cam].image = new_frame
@@ -183,12 +191,18 @@ class Gui:
 			if(client_id in self.cams):
 				new_image = Image.open(io.BytesIO(new_image_frame))
 				new_image = new_image.resize(self.cam_size)
-				new_frame = ImageTk.PhotoImage(image = new_image)
+				w, h = FONT_IMAGE.getsize(client_id)
+				client_name = ImageDraw.Draw(new_image)
+				client_name.rectangle((0, 0, 2 + w, h), fill = "white")	#sfondo etichetta
+				client_name.text((x, y), client_id, fill = "#1c1c1c", font = FONT_IMAGE) #testo etichetta
+				new_frame = ImageTk.PhotoImage(image = new_image) 
 				self.cams[client_id].config(image = new_frame)
 				self.cams[client_id].image = new_frame
 
 	#aggiorna l'immagine di una webcam
 	def updateCam(self, client_id, new_image_frame):
+		if client_id is None:
+			client_id = "tu"
 		try:
 			self.computeSize(client_id, new_image_frame)
 		except RuntimeError as e:	#client eliminato durante il refresh dell'immagine
@@ -199,10 +213,12 @@ class Gui:
 			pass
 
 	def addCam(self, client_id):
-			if not self.cams_container:	#se la root non è pronta
-				self.temp_client_list.append(client_id)	#salva il client appena collegato in una lista temporanea
-			else:
-				self.layoutCam(client_id)	#altrimenti disegna la webcam
+		if client_id is None:
+			client_id = "tu"
+		if not self.cams_container:	#se la root non è pronta
+			self.temp_client_list.append(client_id)	#salva il client appena collegato in una lista temporanea
+		else:
+			self.layoutCam(client_id)	#altrimenti disegna la webcam
 
 	def layoutCam(self, client_id):
 		self.cams[client_id] = ttk.Label(self.cams_container)
@@ -344,7 +360,7 @@ class Gui:
 		self.grayscale.bind("<ButtonRelease>", lambda event:self.toggleFilter(event, self.grayscale, "grayscale"))
 		self.blur = ttk.Button(filters, text = "sfocato", width = 13)
 		self.blur.bind("<ButtonRelease>", lambda event:self.toggleFilter(event, self.blur, "blur"))
-		self.invert = ttk.Button(filters, text = "inverti vert.", width = 13)
+		self.invert = ttk.Button(filters, text = "inverti", width = 13)
 		self.invert.bind("<ButtonRelease>", lambda event:self.toggleFilter(event, self.invert, "invert"))
 		self.mirror = ttk.Button(filters, text = "specchio", width = 13)
 		self.mirror.bind("<ButtonRelease>", lambda event:self.toggleFilter(event, self.mirror, "mirror"))
