@@ -76,7 +76,7 @@ class Gui:
 			self.text_chat["width"] = int(1/35 * event.width)
 			self.text_chat["height"] = int(2/37 * event.height)
 			self.text_chat.see("end")
-			self.computeSize()
+			self.updateCam()
 
 	def micToggle(self, event, mute_button, mic_off, mic_on):
 		global mic_status
@@ -171,44 +171,43 @@ class Gui:
 		self.submit["state"] = "enabled"
 		self.input_entry["state"] = "enabled"
 
-	def computeSize(self, client_id = "", new_image_frame = None):
-		self.cam_size = (int(math.ceil(16 * (40 - math.log(self.grid_size**2) * 8 - (self.width_screen / (self.actual_window_width/7))))),
-	 					int(math.ceil(9 * (40 - math.log(self.grid_size**2) * 6 - (self.height_screen / (self.actual_window_height/6))))))	#decide la grandezza delle webcam
-		if(self.cam_size[0] < 32 or self.cam_size[1] < 18):
-			self.cam_size = (32, 18)
-
-		temp_cams = list(self.cams.keys())
-		x, y = (1, 0)	#coordinate iniziali (alto-sinistra) per la creazione dell'etichetta della webcam
-		if (not client_id and new_image_frame is None):
-			for cam in temp_cams:
-				if(cam in self.cams):
-					new_image = ImageTk.getimage(self.cams[cam].image)
-					new_image = new_image.resize(self.cam_size)
-					w, h = FONT_IMAGE.getsize(cam)
-					client_name = ImageDraw.Draw(new_image, "RGBA")
-					client_name.rectangle((0, 0, 2 + w, h), fill = (38, 38, 38, 100))	#sfondo etichetta
-					client_name.text((x, y), cam, fill = "white", font = FONT_IMAGE) #testo etichetta
-					new_frame = ImageTk.PhotoImage(image = new_image)
-					self.cams[cam].config(image = new_frame)
-					self.cams[cam].image = new_frame
-		else:
-			if(client_id in self.cams):
-				new_image = Image.open(io.BytesIO(new_image_frame))
-				new_image = new_image.resize(self.cam_size)
-				w, h = FONT_IMAGE.getsize(client_id)
-				client_name = ImageDraw.Draw(new_image, "RGBA")
-				client_name.rectangle((0, 0, 2 + w, h), fill = (38, 38, 38, 100))	#sfondo etichetta
-				client_name.text((x, y), client_id, fill = "white", font = FONT_IMAGE) #testo etichetta
-				new_frame = ImageTk.PhotoImage(image = new_image)
-				self.cams[client_id].config(image = new_frame)
-				self.cams[client_id].image = new_frame
-
 	#aggiorna l'immagine di una webcam
-	def updateCam(self, client_id, new_image_frame):
-		if client_id is None:
-			client_id = "Tu"
+	def updateCam(self, client_id = "", new_image_frame = None):
 		try:
-			self.computeSize(client_id, new_image_frame)
+			self.cam_size = (int(math.ceil(16 * (40 - math.log(self.grid_size**2) * 8 - (self.width_screen / (self.actual_window_width/7))))),
+							int(math.ceil(9 * (40 - math.log(self.grid_size**2) * 6 - (self.height_screen / (self.actual_window_height/6))))))	#decide la grandezza delle webcam
+			if(self.cam_size[0] < 32 or self.cam_size[1] < 18):
+				self.cam_size = (32, 18)
+
+			temp_cams = list(self.cams.keys())
+			x, y = (1, 0)	#coordinate iniziali (alto-sinistra) per la creazione dell'etichetta della webcam
+
+			if (not client_id and not new_image_frame):	#si avvera quando la funzione viene chiamata da resizeWindow
+				for cam in temp_cams:	#aggiorna tutte le webcam
+					if(cam in self.cams and self.cams[cam].image):
+						new_image = ImageTk.getimage(self.cams[cam].image)
+						new_image = new_image.resize(self.cam_size)
+						w, h = FONT_IMAGE.getsize(cam)
+						client_name = ImageDraw.Draw(new_image, "RGBA")
+						client_name.rectangle((0, 0, 2 + w, h), fill = (0, 0, 0, 70))	#sfondo etichetta
+						client_name.text((x, y), cam, fill = "white", font = FONT_IMAGE) #testo etichetta
+						new_frame = ImageTk.PhotoImage(image = new_image)
+						self.cams[cam].config(image = new_frame)
+						self.cams[cam].image = new_frame
+
+			else:	#aggiorna una webcam specifica
+				if not client_id:
+					client_id = "Tu"
+				if(client_id in self.cams):
+					new_image = Image.open(io.BytesIO(new_image_frame))	#converto da byte a immagine con PIL
+					new_image = new_image.resize(self.cam_size)
+					w, h = FONT_IMAGE.getsize(client_id)	#ottengo la dimensione per lo spazion dell'id
+					client_name = ImageDraw.Draw(new_image, "RGBA")
+					client_name.rectangle((0, 0, 2 + w, h), fill = (0, 0, 0, 70))	#sfondo etichetta
+					client_name.text((x, y), client_id, fill = "white", font = FONT_IMAGE) #testo etichetta
+					new_frame = ImageTk.PhotoImage(image = new_image)
+					self.cams[client_id].config(image = new_frame)
+					self.cams[client_id].image = new_frame
 		except RuntimeError as e:	#client eliminato durante il refresh dell'immagine
 			pass
 		except KeyError as e:	#client eliminato durante il refresh dell'immagine
@@ -216,14 +215,16 @@ class Gui:
 		except AttributeError as e:	#byte dell'immagine non valdi
 			pass
 
+	#viene a conoscenza dell'aggiunta di un nuovo client
 	def addCam(self, client_id):
-		if client_id is None:
+		if not client_id:
 			client_id = "Tu"
 		if not self.cams_container:	#se la root non è pronta
 			self.temp_client_list.append(client_id)	#salva il client appena collegato in una lista temporanea
 		else:
-			self.layoutCam(client_id)	#altrimenti disegna la webcam
+			self.layoutCam(client_id)
 
+	#aggiunge la nuova webcam alla lista di client
 	def layoutCam(self, client_id):
 		self.cams[client_id] = ttk.Label(self.cams_container)
 		self.placeCams()
@@ -233,7 +234,7 @@ class Gui:
 		self.cams.pop(client_id, None)
 		self.placeCams()
 
-	#metodo che riorganizza le posizioni delle webcam
+	#metodo che posiziona le webcam in una griglia
 	def placeCams(self):
 		column_number = 0
 		row_number = 0
@@ -328,6 +329,7 @@ class Gui:
 		self.subtitle = ttk.Label(subtitles_container, text = "", font = FONT)
 		self.subtitle.pack()
 		subtitles_container.grid(column = 1, row = 0, sticky = "s")
+
 		communication_tools = ttk.Frame(self.root)	#frame che contiene i bottoni per il mute e lo spegnimento della cam
 
 		mute_button = ttk.Button(communication_tools, image = mic_on)
