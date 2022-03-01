@@ -6,7 +6,7 @@ FACES_CASCADE = cv2.CascadeClassifier("./tools/faces.xml")
 
 def apply_filter(filter, frame):
     if filter == 'grayscale':
-        return cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        return cv2.cvtColor(cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY), cv2.COLOR_GRAY2BGR) # converto in grigio e lo ritorno in BGR
 
     elif filter == 'blur':
         return cv2.GaussianBlur(frame, (15, 15), 0)
@@ -15,8 +15,7 @@ def apply_filter(filter, frame):
         return cv2.bitwise_not(frame)
 
     elif filter == "mirror": 
-        frame_flip = cv2.flip(frame,1)
-        return np.hstack([frame,frame_flip]) # incolla 2 frame
+        return np.hstack([frame,cv2.flip(frame,1)]) # incolla 2 frame
 
 
 def face_mask(frame, overlay_image):
