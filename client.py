@@ -19,7 +19,7 @@ HEARTBEAT_INTERVAL = 4
 
 WEBCAM_WIDTH = 400
 WEBCAM_QUALITY = 80
-VIDEO_MISSING = open("assets/video_missing.png", "rb").read()
+VIDEO_MISSING = open("assets/video_missing.jpg", "rb").read()
 
 logging.basicConfig(format="%(levelname)s: %(message)s", level=logging.DEBUG)
 logging.getLogger("PIL").setLevel(logging.WARNING)

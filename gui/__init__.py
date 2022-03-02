@@ -59,18 +59,20 @@ class Gui:
 		self.actual_window_width = self.width_screen
 		self.actual_window_height = self.height_screen
 
+		self.key = tk.PhotoImage(file = "assets/key.png")
 		self.dialog = ttk.Frame(self.root)
 		dialog_text = ttk.Label(self.dialog, text = "Inserisci codice stanza:", font = FONT)
 		dialog_text.pack()
+		self.input_code = ttk.Frame(self.dialog)
 		room_code = tk.StringVar()
-		self.input_entry= ttk.Entry(self.dialog, textvariable = room_code, font = FONT)
+		self.input_entry= ttk.Entry(self.input_code, textvariable = room_code, font = FONT)
 		self.input_entry.focus()
 		self.input_entry.pack(side = "left", ipady = 3)
-		self.key = tk.PhotoImage(file = "assets/key.png")
-		self.submit = ttk.Button(self.dialog, image = self.key)
+		self.submit = ttk.Button(self.input_code, image = self.key)
 		self.root.bind("<Return>", lambda event:self.getJoinCode(event, room_code))
 		self.submit.bind("<ButtonRelease>", lambda event:self.getJoinCode(event, room_code))
 		self.submit.pack(side = "right", padx = 2)
+		self.input_code.pack()
 		self.error = ttk.Label(self.dialog, text = "", foreground = "red", font = FONT)
 		self.error.pack()
 		self.dialog.pack(expand = True)
@@ -195,8 +197,7 @@ class Gui:
 						new_image = ImageTk.getimage(self.cams[cam].image)
 						new_image = new_image.resize(self.cam_size)
 						w, h = FONT_IMAGE.getsize(cam)
-						client_name = ImageDraw.Draw(new_image, "RGBA")
-						client_name.rectangle((0, 0, 2 + w, h), fill = (0, 0, 0, 70))	#sfondo etichetta
+						client_name = ImageDraw.Draw(new_image)
 						client_name.text((x, y), cam, fill = "white", font = FONT_IMAGE) #testo etichetta
 						new_frame = PhotoImage(image = new_image)
 						self.cams[cam].config(image = new_frame)
