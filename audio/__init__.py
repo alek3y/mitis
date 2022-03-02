@@ -4,41 +4,16 @@ import speech_recognition as sr
 import pygame
 import time
 from threading import Thread, Semaphore
-from math import ceil #2.0 = 2 | 2.1 = 3
 
 FORMAT = pyaudio.paInt16
-CHANNELS = 1 #numero di canali audio da usare
-RATE = 44100 #numero di frame al secondo
-CHUNK = 512 #numero di frame per ogni buffer
-CAPTION_SAMPLES_AMOUNT = 200 #numero di sample per ogni caption (indichiamo con sample un elemento del buffer audio)
-MAX_CLIENTS = 50 #numero massimo di client che possono essere connessi
+CHANNELS = 1 # numero di canali audio da usare
+RATE = 44100 # numero di frame al secondo
+CHUNK = 512 # numero di frame per ogni buffer
+CAPTION_SAMPLES_AMOUNT = 200 # numero di sample per ogni caption (indichiamo con sample un elemento del buffer audio)
+MAX_CLIENTS = 50 # numero massimo di client che possono essere connessi
 
 pygame.mixer.init(frequency=RATE, channels=CHANNELS)
 pygame.mixer.set_num_channels(MAX_CLIENTS)
-
-class SpeechRecognition(Thread):
-    def __init__(self, recorder, caption_handler):
-        Thread.__init__(self, daemon=True)
-        self.caption_handler = caption_handler
-        self.recognizer = sr.Recognizer()
-        self.recorder = recorder
-        
-    def run(self):
-        while True:
-            for i in range(CAPTION_SAMPLES_AMOUNT):
-                self.recorder.sem.acquire()
-            caption_audio_bytes = b''.join(self.recorder.chunk_buffer) #4 chunk joinati
-            text = self.caption(caption_audio_bytes)
-            self.caption_handler(text)
-            self.recorder.chunk_buffer.clear()
-
-    def caption(self, audio):
-        audio_data = sr.AudioData(audio, RATE, 2) #Byte -> AudioData
-        try:
-            text = self.recognizer.recognize_google(audio_data=audio_data, language='it-IT')
-        except sr.UnknownValueError:
-            text = ""
-        return text
 
 class AudioHandler(Thread):
     def __init__(self, chunk_handler):
@@ -83,7 +58,7 @@ class AudioPlayer(Thread):
         while self.running:
             audio_bytes = self.buffer.get()
             self.play(audio_bytes)
-            time.sleep(1/RATE * CHUNK) #si assicura che non vengano riprodotti chunk uno sopra l'altro, trovando quanto tempo ci mette a riprodurre un chunk
+            time.sleep(1/RATE * CHUNK) # si assicura che non vengano riprodotti chunk uno sopra l'altro, trovando quanto tempo ci mette a riprodurre un chunk
 
     def play(self, audio_bytes):
         sound = pygame.mixer.Sound(buffer=audio_bytes)
@@ -91,3 +66,28 @@ class AudioPlayer(Thread):
     
     def stop(self):
         self.running = False
+
+
+class SpeechRecognition(Thread):
+    def __init__(self, recorder, caption_handler):
+        Thread.__init__(self, daemon=True)
+        self.caption_handler = caption_handler
+        self.recognizer = sr.Recognizer()
+        self.recorder = recorder
+        
+    def run(self):
+        while True:
+            for i in range(CAPTION_SAMPLES_AMOUNT):
+                self.recorder.sem.acquire()
+            caption_audio_bytes = b''.join(self.recorder.chunk_buffer) # 200 chunk joinati
+            text = self.caption(caption_audio_bytes)
+            self.caption_handler(text)
+            self.recorder.chunk_buffer.clear()
+
+    def caption(self, audio):
+        audio_data = sr.AudioData(audio, RATE, 2) # Byte -> AudioData
+        try:
+            text = self.recognizer.recognize_google(audio_data=audio_data, language='it-IT')
+        except sr.UnknownValueError:
+            text = ""
+        return text
