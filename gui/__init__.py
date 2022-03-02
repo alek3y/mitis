@@ -1,10 +1,4 @@
-# # https://www.pythontutorial.net/tkinter/tkinter-hello-world/
-# # https://www.pythontutorial.net/tkinter/tkinter-grid/
-# # pip3 install ttkthemes
-# # pip3 install pillow
-# pip3 install imutils
-# pip3 install opencv-python
-# # keybinds: https://www.pythontutorial.net/tkinter/tkinter-event-binding/
+
 import tkinter as tk
 from tkinter import ttk
 from tkinter import filedialog
@@ -12,6 +6,7 @@ from PIL import ImageTk, Image, ImageDraw, ImageFont
 from ttkthemes import ThemedTk
 import io
 import math
+import webbrowser
 
 FONT = ("Monospace", 11)
 FONT_IMAGE = ImageFont.truetype("assets/DejaVuSansMono.ttf", 12)	#font dell'etichetta
@@ -36,7 +31,6 @@ class Gui:
 	#camHandler: per comunicare lo stato della cam
 	def __init__(self, roomJoiner, messageHandler, muteHandler, camHandler):
 		self.grid_size = 1	#numero di righe e di colonne delle cam (dato che è un quadrato: colonne = righe)
-		self.counter_size = 1
 		self.cams_container = None
 		self.temp_client_list = []	#lista che conterrà le webcam temporanee durante la crezione della root
 		self.cams = {}	#dizionario che conterrà le webcam dei client presenti
@@ -53,7 +47,6 @@ class Gui:
 		self.root.title("Mitis")
 		self.width_screen = self.root.winfo_screenwidth()	# larghezza dello schermo
 		self.height_screen = self.root.winfo_screenheight() # altezza dello schermo
-		# self.root.geometry(f"{self.width_screen}x{self.height_screen}")
 		self.root.attributes('-zoomed', True)
 		self.root.minsize(704, 396)	#grandezza minima finestra
 		self.actual_window_width = self.width_screen
@@ -76,7 +69,11 @@ class Gui:
 		self.error = ttk.Label(self.dialog, text = "", foreground = "red", font = FONT)
 		self.error.pack()
 		self.dialog.pack(expand = True)
+		self.repo_link = ttk.Label(self.root, text = "Github", foreground = "blue", cursor = "hand2", font = FONT)
+		self.repo_link.pack()
+		self.repo_link.bind("<ButtonRelease>", lambda event: webbrowser.open_new("https://github.com/alek3y/mitis"))
 
+	#si occupa di ridimensionare la chat e le webcam
 	def resizeWindow(self, event):
 		if event.widget == self.root:
 			self.actual_window_height = event.height
@@ -87,6 +84,7 @@ class Gui:
 			self.text_chat.see("end")
 			self.updateCam()
 
+	#attivo o disattiva il tasto per il microfono. mute_button = è l'oggetto bottone, mic_off e mic_on = sono le icone
 	def micToggle(self, event, mute_button, mic_off, mic_on):
 		global mic_status
 		if(mic_status):	#se il microfono è attivo
@@ -97,6 +95,7 @@ class Gui:
 			mic_status = True
 		self.muteHandler()
 
+	#attivo o disattiva il tasto per le webcam. cam_button = è l'oggetto bottone, cam_off e cam_on = sono le icone
 	def camToggle(self, event, cam_button, cam_off, cam_on):
 		global cam_status
 		if(cam_status):	#se la cam è attiva
@@ -107,6 +106,7 @@ class Gui:
 			cam_status = True
 		self.camHandler()
 
+	#attivo o disattiva il tasto per i sottotitoli. subtitles_button = è l'oggetto bottone, subtitles_off e subtitles_on = sono le icone
 	def subtitlesToggle(self, event, subtitles_button, subtitles_off, subtitles_on):
 		global subtitles_status
 		if(str(subtitles_button["state"]) != "disabled"):
@@ -117,7 +117,9 @@ class Gui:
 			else:
 				subtitles_button.config(image = subtitles_on)
 				subtitles_status = True
-
+	
+	#mostra i sottotitoli: name = client che manda i sottotitoli; line = sottotitolo effettivo
+	#i sottotitoli vengono rappresentati in 2 righe
 	def placeSubtitle(self, name, line):
 		global subtitles_status
 		if subtitles_status:
@@ -141,10 +143,12 @@ class Gui:
 				self.subtitle["text"] += " " + line	#appende il sottotitolo a quello precedente
 		self.last_talker = name
 
+	#quando l'input field va in focus elimina il placeholder
 	def clearTextbox(self, event, text):
 		if (text.get() == PLACEHOLDER):
 			self.textbox.delete(0, "end")	#elimina tutto il contenuto
 
+	#riceve il messaggio da mettere all'interno della chat. name = nome del client; message = è il messaggio effettivo
 	def receiveMessage(self, name, message):
 		self.text_chat.configure(state = 'normal')
 		self.text_chat.insert("end", "<" + name + "> " + message + "\n")
@@ -161,15 +165,16 @@ class Gui:
 			self.text_chat.see("end")
 			self.textbox.delete(0, "end")
 
+	#aggiunge il placeholder nell'input della chat solo se è vuoto
 	def addPlaceholder(self, event, text):
 		if (not text.get()):
 			self.textbox.insert(0, PLACEHOLDER)
 
 	#invia il codice della stanza al server
 	def getJoinCode(self, event, room_code):
-		self.error.config(text = "")
+		self.error.config(text = "")	# pulisce il messaggio di errore nel caso ci sia stato nel tentativo precedente
 		self.error.update()
-		if (room_code.get() != "" and str(self.submit["state"]) != "disabled"):
+		if (room_code.get() and str(self.submit["state"]) != "disabled"):
 			self.submit["state"] = "disabled"
 			self.input_entry["state"] = "disabled"
 			self.roomJoiner(room_code.get())
@@ -195,12 +200,12 @@ class Gui:
 				for cam in temp_cams:	#aggiorna tutte le webcam
 					if(cam in self.cams and self.cams[cam].image):
 						new_image = ImageTk.getimage(self.cams[cam].image)
-						new_image = new_image.resize(self.cam_size)
-						w, h = FONT_IMAGE.getsize(cam)
+						new_image = new_image.resize(self.cam_size)	#ridimensiona le webcam
+						w, h = FONT_IMAGE.getsize(cam)	#ottiene la grandezza dell'id in base al testo e al font
 						client_name = ImageDraw.Draw(new_image)
 						client_name.text((x, y), cam, fill = "white", font = FONT_IMAGE) #testo etichetta
 						new_frame = PhotoImage(image = new_image)
-						self.cams[cam].config(image = new_frame)
+						self.cams[cam].config(image = new_frame)	#aggiorna con la nuovo immagine
 						self.cams[cam].image = new_frame
 
 			else:	#aggiorna una webcam specifica
@@ -208,13 +213,13 @@ class Gui:
 					client_id = "Tu"
 				if(client_id in self.cams):
 					new_image = Image.open(io.BytesIO(new_image_frame))	#converto da byte a immagine con PIL
-					new_image = new_image.resize(self.cam_size)
+					new_image = new_image.resize(self.cam_size)	#ridimensiona le webcam
 					w, h = FONT_IMAGE.getsize(client_id)	#ottengo la dimensione per lo spazion dell'id
 					client_name = ImageDraw.Draw(new_image, "RGBA")
 					client_name.rectangle((0, 0, 2 + w, h), fill = (0, 0, 0, 70))	#sfondo etichetta
 					client_name.text((x, y), client_id, fill = "white", font = FONT_IMAGE) #testo etichetta
 					new_frame = PhotoImage(image = new_image)
-					self.cams[client_id].config(image = new_frame)
+					self.cams[client_id].config(image = new_frame)	#aggiorna con la nuovo immagine
 					self.cams[client_id].image = new_frame
 		except RuntimeError as e:	#client eliminato durante il refresh dell'immagine
 			pass
@@ -223,9 +228,10 @@ class Gui:
 		except AttributeError as e:	#byte dell'immagine non valdi
 			pass
 
-	#viene a conoscenza dell'aggiunta di un nuovo client
+	#viene a conoscenza dell'aggiunta di un nuovo client; se l'interfaccia non è ancora caricata i client verranno salvati in una lista temporanea
+	#che verrà richiamata una volta che l'interfaccia sarà pronta
 	def addCam(self, client_id):
-		if not client_id:
+		if not client_id:	#se il client_id è None allora è la webcam locale
 			client_id = "Tu"
 		if not self.cams_container:	#se la root non è pronta
 			self.temp_client_list.append(client_id)	#salva il client appena collegato in una lista temporanea
@@ -237,6 +243,7 @@ class Gui:
 		self.cams[client_id] = ttk.Label(self.cams_container)
 		self.placeCams()
 
+	#rimuove la webcam di un client che si è scollegato
 	def removeCam(self, client_id):
 		self.cams[client_id].grid_forget()
 		self.cams.pop(client_id, None)
@@ -246,23 +253,22 @@ class Gui:
 	def placeCams(self):
 		column_number = 0
 		row_number = 0
-		temp_cams = list(self.cams.keys())
+		temp_cams = list(self.cams.keys())	#ottengo i nomi dei client connessi al momento
 		cam_number = len(temp_cams)
 		if (cam_number > (self.grid_size**2)):
 			self.grid_size += 1
-			self.counter_size += 4.10
 		elif (cam_number <= ((self.grid_size - 1)**2)):
 			self.grid_size -= 1
-			self.counter_size -= 4.10
 
-		for cam in temp_cams:
+		for cam in temp_cams:	#posiziona le cam una ad una
 			self.cams[cam].grid(column = column_number, row = row_number, columnspan = 1)
 
 			if (column_number == (self.grid_size - 1)):
 				row_number += 1
 				column_number = 0
 			else: column_number += 1
-	
+
+	#apre la finestra di selezione per la maschera
 	def selectMask(self, event, mask_button):
 		global mask_status
 		if(mask_status):
@@ -277,6 +283,7 @@ class Gui:
 				mask_button.config(image = self.mask_on)
 				mask_status = True
 
+	#mostra i filtri disponibili
 	def showFilters(self, event, filters_button):
 		global filters_status
 		if(filters_status):
@@ -294,6 +301,7 @@ class Gui:
 			self.mirror.pack(pady = 2)
 			filters_status = True
 
+	#attiva o disattiva un determinato filtro
 	def toggleFilter(self, event, button, filter_name):
 		if filter_name in self.filters:
 			self.filters.remove(filter_name)
@@ -304,16 +312,17 @@ class Gui:
 
 	#crea il layout della finestra dopo che si è entrati in una stanza
 	def createWindow(self):
-		self.dialog.pack_forget()
-		highlight_style = ttk.Style()
+		self.dialog.pack_forget()	#rimuovo la finestra di inserimento della stanza
+		self.repo_link.pack_forget()
+		highlight_style = ttk.Style()		#stile per filtro attivato
 		highlight_style.configure("W.TButton",
 						font = ("monospace", 9, "bold"),
 						foreground = "green")
-		normal_style = ttk.Style()
+		normal_style = ttk.Style()		#stile per filtro disattivato
 		normal_style.configure("TButton",
 						font = ("monospace", 9, "bold"),)
 
-		#creazione delle colonne e delle righe
+		#creazione delle colonne e delle righe della finestra
 		self.root.columnconfigure(0, weight = 1)
 		self.root.columnconfigure(1, weight = 17)
 		self.root.columnconfigure(2, weight = 1)
@@ -333,12 +342,12 @@ class Gui:
 		subtitles_off = tk.PhotoImage(file = "assets/subtitles_off.png")
 		subtitles_on = tk.PhotoImage(file = "assets/subtitles.png")
 
-		subtitles_container = ttk.Frame(self.root)
+		subtitles_container = ttk.Frame(self.root)	#contenitore dei sottotitoli
 		self.subtitle = ttk.Label(subtitles_container, text = "", font = FONT)
 		self.subtitle.pack()
 		subtitles_container.grid(column = 1, row = 0, sticky = "s")
 
-		communication_tools = ttk.Frame(self.root)	#frame che contiene i bottoni per il mute e lo spegnimento della cam
+		communication_tools = ttk.Frame(self.root)	#frame che contiene i bottoni per il microfono e la cam
 
 		mute_button = ttk.Button(communication_tools, image = mic_on)
 		mute_button.bind("<ButtonRelease>", lambda event:self.micToggle(event, mute_button, mic_off, mic_on))	#chiama la funzione anche con il click del mouse quando rilasciato
@@ -363,9 +372,9 @@ class Gui:
 		send_button.pack(padx = 5, pady = 1)
 		send_message_wrapper.grid(column = 2, row = 1, sticky = "e")
 
-		tools = ttk.Frame(self.root)	#frame che contiene tutti i tools secondari
-		
-		filters = ttk.Frame(tools)
+		tools = ttk.Frame(self.root)	#frame che contiene tutti i tools secondari (maschere, filtri, sottotitoli)
+
+		filters = ttk.Frame(tools)	#contiene i filtri
 		self.grayscale = ttk.Button(filters, text = "scala grigi", width = 13)
 		self.grayscale.bind("<ButtonRelease>", lambda event:self.toggleFilter(event, self.grayscale, "grayscale"))
 		self.blur = ttk.Button(filters, text = "sfocato", width = 13)
