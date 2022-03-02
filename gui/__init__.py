@@ -22,6 +22,13 @@ subtitles_status = False
 mask_status = False
 filters_status = False
 
+class PhotoImage(ImageTk.PhotoImage):
+	def __del__(self):
+		try:
+			super().__del__()
+		except Exception:
+			pass
+
 class Gui:
 	#roomJoiner: comunica al client la stanza a cui unirsi (il client lo invierà poi al server)
 	#messageHandler: comunicazione tra gui e client per l'invio dei messaggi
@@ -191,7 +198,7 @@ class Gui:
 						client_name = ImageDraw.Draw(new_image, "RGBA")
 						client_name.rectangle((0, 0, 2 + w, h), fill = (0, 0, 0, 70))	#sfondo etichetta
 						client_name.text((x, y), cam, fill = "white", font = FONT_IMAGE) #testo etichetta
-						new_frame = ImageTk.PhotoImage(image = new_image)
+						new_frame = PhotoImage(image = new_image)
 						self.cams[cam].config(image = new_frame)
 						self.cams[cam].image = new_frame
 
@@ -205,7 +212,7 @@ class Gui:
 					client_name = ImageDraw.Draw(new_image, "RGBA")
 					client_name.rectangle((0, 0, 2 + w, h), fill = (0, 0, 0, 70))	#sfondo etichetta
 					client_name.text((x, y), client_id, fill = "white", font = FONT_IMAGE) #testo etichetta
-					new_frame = ImageTk.PhotoImage(image = new_image)
+					new_frame = PhotoImage(image = new_image)
 					self.cams[client_id].config(image = new_frame)
 					self.cams[client_id].image = new_frame
 		except RuntimeError as e:	#client eliminato durante il refresh dell'immagine
